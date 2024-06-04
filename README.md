@@ -1,1 +1,1 @@
-# zeus-training..
+# zeus-training
