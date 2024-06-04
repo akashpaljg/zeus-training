@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+        body{
+            background-color: lemonchiffon;
+        }
+
+        /* h2 */
+        h2{
+            background-color: rgb(35, 168, 35);
+            color: white;
+            padding: 0.1rem 0.9rem;
+            font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .capitalize--text{
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            font-style: italic;
+            font-family: "Roboto";
+        }
+        .list--element{
+            color: red;
+            font-style: italic;
+        }
+        .zeus--link{
+            text-decoration: none;
+            color: purple;
+
+        }
+        h3{
+            color: gray;
+        }
+        table{
+            background-color: rgb(199, 193, 193);
+        }
+        /* .heading--element{
+            padding-bottom: 0.1px;
+            background-color: red;
+        } */
+        /* rgb(158, 24, 24) */
+        h1{
+            background-color: rgb(158, 24, 24) ;
+        }
+        .heading--element{
+            background-color: red ;
+            text-align: center;
+            color: lemonchiffon;
+            font-weight: normal;
+            font-family: Tahoma, Geneva, Verdana, sans-serif;
+            font-style: italic;
+            letter-spacing: 1.5rem;
+            padding-bottom: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="heading--element">
+        <h1>My first web page</h1>
+    </div>
+    <h2>What this is</h2>
+    <p>Welcome to my <i>first</i> webpage. I created this webpage  without the assistance of a webpage editor. Just my little text editor and keen<b class="capitalize--text"> understanding of html.</b></p>
+    <h2>Why this is</h2>
+    <ul class="list--element">
+        <li>To learn HTML</li>
+        <li>List element
+            <ol>
+                <li>Home</li>
+                <li>FAQ</li>
+                <li>Contact</li>
+                <li>About</li>
+            </ol>
+        </li>
+        <li>Here I have created ordered and unordered list</li>
+    </ul>
+    <h2>ZeusLearning.com</h2>
+    <a class="zeus--link" href="https://www.zeuslearning.com/" target="_blank">This link will open zeuslearning.com in new tab</a>
+    <h2>On click of the following image navigate to Google.com</h2>
+    <a  href="https://www.google.com/" target="_blank">
+        <img src="logo_google.jpg" alt="This is a Google logo" width="250">
+    </a>
+    <h3>Some random table</h3>
+    <table border="1">
+        <tr>
+            <td>Row 1 cell 1</td>
+            <td>Row 1 cell 2</td>
+            <td>Row 1 cell 3</td>
+        </tr>
+        <tr>
+            <td>Row 2 cell 1</td>
+            <td>Row 2 cell 2</td>
+            <td>Row 2 cell 3</td>
+        </tr>
+        <tr>
+            <td>Row 3 cell 1</td>
+            <td>Row 3 cell 2</td>
+            <td>Row 3 cell 3</td>
+        </tr>
+    </table>
+    <h3>Some random form</h3>
+    <p><b class="capitalize--text">Note :</b> It looks the part but won't do anything.</p>
+    <form class="random-form">
+        <p>Name</p>
+        <input type="text" name="name" id="name" placeholder="Enter your name">
+        <p>Comments</p>
+        <textarea rows="10" cols="20" id="comments" placeholder="Your comments" name="comemnts"></textarea>
+        <p>Are you:</p>
+        <p>
+        <input type="radio" name="gender" id="male" value="male">
+        <label for="male">Male</label>
+        </p>
+        <p>
+        <input type="radio" name="gender" id="female" value="female">
+        <label for="female">Female</label>
+        </p>
+        <button class="submit-btn" type="submit">Submit Query</button>
+    </form>
+</body>
+<script>
+    const formEle = document.querySelector(".random-form");
+
+    let radioVal;
+    let radios = document.querySelectorAll('input[name="gender"]');
+        // console.log(radios)
+        radios.forEach(radio => {
+        radio.addEventListener('click', function () {
+            radioVal = radio.value;
+            console.log(radioVal);
+        });
+    });
+
+    formEle.addEventListener("submit",(e)=>{
+        e.preventDefault();
+        let name = document.getElementById("name");
+        let comments = document.getElementById("comments");
+        // console.log(radioVal);
+        if(name.value == "" || comments.value == "" || radioVal === undefined ){
+            
+            if(name.value == ""){
+                alert("All fields are compulsory");
+                name.focus();
+            }else if(comments.value == ""){
+                alert("All fields are compulsory");
+                comments.focus();
+            }else if(radioVal === undefined){
+                alert("Please select gender!")
+            }
+        }else{
+            formEle.submit();
+        }
+    })
+   
+</script>
+</html>
