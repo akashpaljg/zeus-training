@@ -113,6 +113,20 @@
             display: flex;
             flex-direction: column;
         }
+        .login-personal > .margin-bottom > .passwordIcon{
+            display: flex;
+            border-bottom: 1px solid gray;
+            ;
+        }
+        .login-personal > .margin-bottom > .passwordIcon > input{
+            border: none;
+            width: 100%;
+            font-size: 1rem;
+            padding: 0.5rem 0%;
+        }
+        .login-personal > .margin-bottom > .passwordIcon > input::placeholder{
+            font-family: 'QuicksandSemiBold', Arial, Helvetica, sans-serif;
+        }
         .login-personal > .margin-bottom > input {
             border: none;
             border-bottom: 1px solid gray;
@@ -203,6 +217,7 @@
             appearance:none;
             background-position-x: 100%;
         }
+        
     </style>
 </head>
 <body>
@@ -247,8 +262,10 @@
                     <a href="">FORGOT USERNAME?</a>
                 </div>
                 <div class="margin-bottom">
-                    <input id="#password-field" type="password" name="password" placeholder="Password*">
-                    <!-- <img src="./icons/preview.svg" width="20"> -->
+                    <div class="passwordIcon">
+                        <input id="#password-field" type="password" name="password" placeholder="Password*">
+                        <img src="./icons/preview.svg" width="20">
+                    </div>
                     <a href="">FORGOT PASSWORD?</a>
                 </div>
             </div>
