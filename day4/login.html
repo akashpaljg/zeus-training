@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        @font-face {
+            font-family: QuicksandBold;
+            src: url("./Quicksand font 1/static/Quicksand-Bold.ttf");
+        }
+        @font-face {
+            font-family: QuicksandLight;
+            src: url("./Quicksand font 1/static/Quicksand-Light.ttf");
+        }
+        @font-face {
+            font-family: QuicksandMedium;
+            src: url("./Quicksand font 1/static/Quicksand-Medium.ttf");
+        }
+        @font-face {
+            font-family: QuicksandRegular;
+            src: url("./Quicksand font 1/static/Quicksand-Regular.ttf");
+        }
+        @font-face {
+            font-family: QuicksandSemiBold;
+            src: url("./Quicksand font 1/static/Quicksand-SemiBold.ttf");
+        }
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        .main-page{
+            background-color: #eeeeee;
+            height: 100%;
+            width: 100%;
+        }
+        .login-form{
+            padding: 3%;
+            /* width: fit-content; */
+            width: 500px;
+            min-width: 20%;
+            margin: 5rem auto 15rem;
+            border: none;
+            border-top: 4px solid rgb(57, 180, 189);
+            background-color: white;
+        }
+        .login-header{
+            font-size: 1.5rem;
+            display: flex;
+        }
+        .login-header > span {
+            margin: 0 auto;
+            font-family: QuicksandBold;
+        }
+        .login-radio{
+            display: flex;
+            font-size: 1.2rem;
+            margin-bottom: 0.7rem;
+            font-family: QuicksandMedium;
+        }
+        input[type=radio] {
+            width: 1.4rem;
+            height: 1.4rem;
+            margin: 0 0.5rem;
+            accent-color: rgb(10, 148, 148);
+        }
+
+        .margin-right{
+            margin-right: 1rem;
+            display: flex;
+            align-items: center ;
+            justify-content: center;
+        }
+        .margin-bottom-district {
+            margin-bottom: 4rem;
+        }
+        .margin-bottom{
+            margin-bottom: 2rem;
+        }
+        .login-state{
+            display: flex;
+            flex-direction: column;
+            
+        }
+        .login-state-label{
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+            color: gray;
+            font-family: "QuicksandSemiBold","sans-serif";
+        }
+        .login-state-select{
+            border: none;
+            border-bottom: 1px solid gray;
+            font-size: 1rem;
+            padding: 0px 0px 5px 0px;
+            font-family: "QuicksandBold","sans-serif";
+            background-color: white;
+        }
+        .login-personal {
+            font-family: "QuicksandSemiBold","sans-serif";
+        }
+
+        .login-personal > .margin-bottom > input::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+        font-family: 'QuicksandSemiBold', Arial, Helvetica, sans-serif;
+        color: gray;
+        opacity: 1; /* Firefox */
+        }
+
+
+
+
+        .login-personal > .margin-bottom{
+            display: flex;
+            flex-direction: column;
+        }
+        .login-personal > .margin-bottom > input {
+            border: none;
+            border-bottom: 1px solid gray;
+            font-size: 1rem;
+            padding: 0.5rem 0%;
+        }
+        .login-personal > .margin-bottom > a{
+            text-decoration: none;
+            text-align: right;
+            color: rgb(10, 148, 148);
+        }
+        .login-remember{
+            font-size: 1.2rem;
+            font-family: "QuicksandSemiBold";
+            display: flex;
+            align-items: center;
+        } 
+        #rememberme{
+            width: 20px;
+            height: 20px;
+            accent-color: rgb(10, 148, 148);
+            margin-right: 5px;
+        }
+        .login-submit{
+            width: 50%;
+            max-width: 60%;
+            padding: 2% 0%;
+            display: block;
+            margin: 0 auto;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-family: "QuicksandSemibold";
+            background-color:aquamarine;
+            /* box-shadow: 0px 1px 5px black; */
+            box-shadow: 0 5px 5px -2px gray;
+        }
+        
+        /* Navbar */
+        .main-page-navbar{
+            padding: 0.9rem 1.3rem;
+            background-image: url("./header\ pattern\ svg.svg")
+        }
+        .main-page-links{
+            display: flex;
+            justify-content: center;
+            margin-bottom: 0.8rem;
+           font-family: "QuicksandSemiBold","sans-serif";
+        }
+        .main-page-links > a{
+            text-decoration: none;
+            color: rgb(31, 107, 82);
+            border: none;
+            padding: 1px 5px;
+        }
+        .main-page-links > a:nth-child(1){
+            border-right: 2px solid gray;
+        }
+        .main-page-footer{
+            display: flex;
+            align-items: center;
+            background-color: #DBD7D2;
+            padding: 1rem;
+            justify-content: center;
+            font-family: "QuicksandSemibold";
+
+        }
+        .main-page-footer > div:nth-child(1){
+            border: none;
+            border-right: 1px solid gray;
+            padding-right: 1rem;
+        }
+        .main-page-footer > div:nth-child(2){
+            color: gray;
+            padding-left: 1rem;
+        }
+        .company-name{
+            margin: 0 0.6rem;
+            font-family: "QuicksandBold","sans-serif";
+        }
+        select {
+            font-size: 16px;
+            line-height: 1;
+            background: url("./icons/arrow-down.svg");
+            background-repeat: no-repeat;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance:none;
+            background-position-x: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-page">
+        <div class="main-page-navbar">
+            <img src="./icons//logo used in header.svg" alt="This is a logo">
+        </div>
+
+    <div class="login-form">
+        <div class="login-header margin-bottom">
+            <img src="./icons/back.svg" alt="This is an icon">
+            <span>Log in with Quantum</span>
+        </div>
+        <form>
+            <div class="login-radio">
+                <div class="margin-right">
+                    <input type="radio" name="radio" id="district" value="district" checked>
+                    <label for="district">District</label>
+                </div>
+                <div class="margin-right">
+                    <input type="radio" name="radio" id="school" value="indepent school">
+                    <label for="school">Independent school</label>
+                </div>
+            </div>
+            <div class="login-state margin-bottom">
+                <label class="login-state-label" for="state">State*</label>
+                <select class="login-state-select" name="state" id="state">
+                    <!-- <option>--Choose the state--</option> -->
+                    <option value="alabama">Alabama</option>
+                </select>
+            </div>
+            <div class="login-state margin-bottom-district">
+                <label class="login-state-label" for="district">District*</label>
+                <select class="login-state-select" name="district" id="district">
+                    <!-- <option>--Choose the state--</option> -->
+                    <option value="alabama school district">Alabama School District</option>
+                </select>
+            </div>
+            <div class="login-personal">
+                <div class="margin-bottom">
+                    <input type="text" name="username" placeholder="Username/Email ID*">
+                    <a href="">FORGOT USERNAME?</a>
+                </div>
+                <div class="margin-bottom">
+                    <input id="#password-field" type="password" name="password" placeholder="Password*">
+                    <!-- <img src="./icons/preview.svg" width="20"> -->
+                    <a href="">FORGOT PASSWORD?</a>
+                </div>
+            </div>
+            <div class="login-remember margin-bottom">
+                <input type="checkbox" name="remember" id="rememberme" checked>
+                <label for="rememberme">Remember Me</label>
+            </div>
+            <button type="submit" class="login-submit">LOG IN</button>
+        </form>
+    </div>
+    <div class="main-page-links">
+            <a href="">About</a>
+            <a href="">Contact Us</a>
+    </div>
+    <div class="main-page-footer">
+        <div>
+            <img src="./icons/logo used in footer.svg" alt="Quantum logo">
+        </div>
+        <div>
+            <p>Copyright &copy; 2020-2021 <span class="company-name">Zeus Systems Pvt. Ltd.</span> <span class="footer-rights">All rights reserved.</span></p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
