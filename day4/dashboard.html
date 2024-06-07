@@ -3,9 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
     <title>Dashbord</title>
+
 </head>
 <body>
-    
+    <div>
+        <!-- Dashnoard Header -->
+        <div class="dashboard-header">
+            <img class="header-logo" src="./icons/logo used in header.svg" alt="Quantum logo">
+
+            <ul class="big-screen">
+                <li  class="active"> <a href="#">DASHBOARD</a> </li>
+                <li> <a href="#">CONTENT</a> </li>
+                <li> <a href="#">USERRS</a> </li>
+                <li> <a href="#">REPORTS</a> </li>
+                <li> <a href="#">ADMIN</a> </li>
+                <li> <a href="#" class="notification-reminder"><img src="./icons/alerts.svg" alt="Notification icon" class="height-40"><span >2</span></a> </li>
+                <li> <a href="#" class="notification-reminder" ><img src="./icons/announcements.svg" alt="Announcement icon" class="height-40"><span>1</span></a> </li>
+                <li> <a href="#" class="notification-reminder"><img src="./icons/account_circle.svg" alt="Profile icon" class="height-40"> <span id="profile">T</span></a> </li>
+            </ul>
+
+            <ul class="small-screen">
+
+                <li> <a href="#" class="notification-reminder"><img src="./icons/alerts.svg" alt="Notification icon" class="height-40"><span >2</span></a> </li>
+                <li> <a href="#" class="notification-reminder" ><img src="./icons/announcements.svg" alt="Announcement icon" class="height-40"><span>1</span></a> </li>
+                <li> <a href="#" class="notification-reminder"><img src="./icons/account_circle.svg" alt="Profile icon" class="height-40"> <span id="profile">T</span></a> </li>
+                <button id="toggleButton" onclick="toggleNav()">
+                    <img src="./icons/hamburger-menu.svg" alt="Toggle Button" >
+                </button>
+               
+            </ul>
+            
+
+        </div>
+        <div class="menuitems">
+            <div  class="active"> <a href="#">DASHBOARD</a> </div>
+            <div> <a href="#">CONTENT</a> </div>
+            <div> <a href="#">USERS</a> </div>
+            <div> <a href="#">REPORTS</a> </div>
+            <div> <a href="#">ADMIN</a> </div>
+        </div>
+
+        <!-- Courses and classes links -->
+        <div class="dashboard-classes-courses">
+                <li class="active"><img src="./icons/courses.svg" alt="Quantum Courses"> <span class="class-course-number">4</span> Courses</li>
+                <li> <img src="./icons/classes.svg" alt="Quantum sClasses"> <span class="class-course-number">4</span> Classes</li>
+            
+        </div>
+
+        <!-- Course selection -->
+         <div class="dashboard-course-selection">
+            <p>Showing 4 of 4 courses</p>
+            <div class="dashboard-course-selection-sorting">
+                <form>
+                    <div>
+                        <label for="courses">Sort By:</label>
+                        <select name="courseName" id="courses">
+                            <option value="coursename">Course Name</option>
+                        </select>
+                    </div>  
+                    <div>
+                        <img src="./icons/sort.svg" alt="">
+                    </div>
+                </form>
+            </div>
+         </div>
+
+        <!-- Grid View Courses -->
+         <div class="dashboard-courses-grid">
+            <!--  1  -->
+            <div class="dashboard-grid-courses-1">
+                <img id="favoriteIcon" src="./icons/favourite.svg" alt="Favorite icon">
+                <div class="dashboard-grid-courses-1-imgText">
+                    
+                        <img src="./images/imageMask.png" alt="imageMask" height="200" >
+                    
+                    <div class="dashboard-grid-courses-1-text">
+                        <p class="margin-bottom-14px">Acceleration</p>
+                        <div class="margin-bottom-14px grades-physics">
+                            <p>Physics</p>
+                            <p class="low-opacity">|</p>
+                            <p>Grade 7 <span>+2</span></p>
+                        </div>
+                        <div class="dashboard-grid-courses-units margin-bottom-1rem">
+                            <p><span>4</span> Units</p>
+                            <p><span>18</span> Lessons</p>
+                            <p><span>24</span> Topics</p>
+                        </div>
+                        <div class="margin-bottom-14px">
+                            <select name="teachername" id="teachersclass">
+                                <option value="">Mr. Frank's Class B</option>
+                            </select>
+                        </div>
+                        <div class="dashboard-student-date grades-physics">
+                            <p class="students">50 Students</p>
+                            <p class="low-opacity">|</p>
+                            <p>21-Jan-2020 - 21-Aug-2020</p>
+                        </div>     
+                    </div>
+                </div>
+                <div class="dashboard-grid-courses-1-buttons">
+                    <ul>
+                        <li> <img src="./icons/preview.svg" alt="Preview icon"> </li>
+                        <li> <img src="./icons/manage course.svg" alt="Preview icon"> </li>
+                        <li> <img src="./icons/grade submissions.svg" alt="Preview icon"> </li>
+                        <li> <img src="./icons/reports.svg" alt="Preview icon"> </li>
+                    </ul>
+                </div>
+            </div> 
+            <!-- 2 -->
+            <div class="dashboard-grid-courses-1">
+                <img id="favoriteIcon" src="./icons/favourite.svg" alt="Favorite icon">
+                <div class="dashboard-grid-courses-1-imgText">
+                    
+                        <img src="./images/imageMask-1.png" alt="imageMask" height="200" >
+                    
+                    <div class="dashboard-grid-courses-1-text">
+                        <p class="margin-bottom-14px">Displacement, Velocity and Speed</p>
+                        <div class="margin-bottom-14px grades-physics">
+                            <p>Physics 2</p>
+                            <p class="low-opacity">|</p>
+                            <p>Grade 6 <span>+3</span></p>
+                        </div>
+                        <div class="dashboard-grid-courses-units margin-bottom-1rem">
+                            <p><span>2</span> Units</p>
+                            <p><span>15</span> Lessons</p>
+                            <p><span>20</span> Topics</p>
+                        </div>
+                        <div class="margin-bottom-14px">
+                            <select name="teachername" id="teachersclass" class="noclass low-opacity">
+                                <option value="noclasses " >No Classes</option>
+                            </select>
+                        </div>
+                        <!-- <div class="dashboard-student-date">
+                            <p class="students">50 Students</p>
+                            <p>21 2020 - 21 Aug 2020</p>
+                        </div>      -->
+                    </div>
+                </div>
+                <div class="dashboard-grid-courses-1-buttons">
+                    <ul>
+                        <li> <img src="./icons/preview.svg" alt="Preview icon"> </li>
+                        <li> <img src="./icons/manage course.svg"  alt="Preview icon" class="low-opacity"> </li>
+                        <li> <img src="./icons/grade submissions.svg"  alt="Preview icon" class="low-opacity"> </li>
+                        
+                        <li> <img src="./icons//reports.svg" alt="Preview icon"> </li>
+                    </ul>
+                </div>
+            </div> 
+            <!-- 3 -->
+            <div class="dashboard-grid-courses-1">
+                <img id="favoriteIcon" src="./icons/favourite.svg" alt="Favorite icon">
+                <div class="dashboard-grid-courses-1-imgText">
+                    
+                        <img src="./images/imageMask-3.png" alt="imageMask" height="200" >
+                    
+                    <div class="dashboard-grid-courses-1-text">
+                        <p class="margin-bottom-14px " id="courses-heading">Introduction to Biology: Micro Organisms and how they affect the behvior</p>
+                        <div class="margin-bottom-14px grades-physics">
+                            <p>Biology</p>
+                            <p class="low-opacity">|</p>
+                            <p>Grade 4 <span>+1</span></p>
+                        </div>
+                        <div class="dashboard-grid-courses-units margin-bottom-1rem">
+                            <p><span>5</span> Units</p>
+                            <p><span>16</span> Lessons</p>
+                            <p><span>22</span> Topics</p>
+                        </div>
+                        <div class="margin-bottom-14px">
+                            <select name="teachername" id="teachersclass">
+                                <option value="">All Classes</option>
+                            </select>
+                        </div>
+                        <div class="dashboard-student-date grades-physics">
+                            <p class="students">300 Students</p>
+                            <!-- <p>21 2020 - 21 Aug 2020</p> -->
+                        </div>     
+                    </div>
+                </div>
+                <div class="dashboard-grid-courses-1-buttons">
+                    <ul>
+                        <li> <img src="./icons/preview.svg" alt="Preview icon"> </li>
+                        <li> <img src="./icons/manage course.svg" alt="Preview icon" class="low-opacity"> </li>
+                        <li> <img src="./icons/grade submissions.svg" alt="Preview icon" class="low-opacity" > </li>
+                        <li> <img src="./icons/reports.svg" alt="Preview icon"> </li>
+                    </ul>
+                </div>
+            </div> 
+            <!-- 4 -->
+            <div class="dashboard-grid-courses-1">
+                <div id="expiredIcon">
+                    <p>EXPIRED</p>
+                </div>
+                <div class="dashboard-grid-courses-1-imgText">
+                    
+                        <img src="./images/imageMask-2.png" alt="imageMask" height="200" >
+
+                    <div class="dashboard-grid-courses-1-text">
+                        <p class="margin-bottom-14px" id="courses-heading">Introduction to High School Mathematics</p>
+                        <div class="margin-bottom-14px grades-physics">
+                            <p>Mathematics</p>
+                            <p class="low-opacity">|</p>
+                            <p>Grade 8 <span>+3</span></p>
+                        </div>
+                        <!-- <div class="dashboard-grid-courses-units margin-bottom-1rem">
+                            <p><span>4</span> Units</p>
+                            <p><span>18</span> Lessons</p>
+                            <p><span>24</span> Topics</p>
+                        </div> -->
+                        <div class="margin-bottom-14px margin-top-1rem">
+                            <select name="teachername" id="teachersclass">
+                                <option value="">Mr. Frank's Class A</option>
+                            </select>
+                        </div>
+                        <div class="dashboard-student-date grades-physics">
+                            <p class="students">44 Students</p>
+                            <p class="low-opacity">|</p>
+                            <p>14-Oct-2019 - 20-Oct-2020</p>
+                        </div>     
+                    </div>
+                </div>
+                <div class="dashboard-grid-courses-1-buttons">
+                    <ul>
+                        <li> <img src="./icons/preview.svg" alt="Preview icon"> </li>
+                        <li> <img src="./icons/manage course.svg" alt="Preview icon"> </li>
+                        <li> <img src="./icons/grade submissions.svg" alt="Preview icon"> </li>
+                        <li> <img src="./icons/reports.svg" alt="Preview icon"> </li>
+                    </ul>
+                </div>
+            </div> 
+         </div>
+
+         <div class="main-page-links">
+            <a href="">About</a>
+            <a href="">Contact Us</a>
+        </div>
+        <div class="main-page-footer">
+            <div>
+                <img src="./icons/logo used in footer.svg" alt="Quantum logo">
+            </div>
+            <div>
+                <p>Copyright &copy; 2020-2021 <span class="company-name">Zeus Systems Pvt. Ltd.</span> <span class="footer-rights">All rights reserved.</span></p>
+            </div>
+        </div>
+
+
+    </div>
+    <script>
+        function toggleNav() { 
+            const paragraph = document. querySelector(".menuitems");
+            if (paragraph.style.display === 'none') { 
+                paragraph.style.display = "block"; 
+            } 
+            else { 
+                paragraph.style.display = "none" 
+            } 
+        } 
+    </script>
 </body>
 </html>
