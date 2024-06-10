@@ -1,0 +1,23 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.4",
+    "body-parser": "^1.20.2",
+    "convert-csv-to-json": "^2.47.0",
+    "csv-parser": "^3.0.0",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "fast-csv": "^5.0.1",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.12.0"
+  }
+}
