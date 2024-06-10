@@ -1,8 +1,6 @@
 const express  = require("express");
 const bodyParser = require("body-parser");
 const multer = require("multer");
-const client = require("./dbConfig/dbConfig.js");
-const csvToJson = require("convert-csv-to-json");
 const fs = require("fs");
 const csv = require("fast-csv");
 
@@ -11,15 +9,14 @@ const { createClient } = require('@supabase/supabase-js');
 
 
 
-const supabaseUrl = ''
+const supabaseUrl = 'https://vjwpcczqotfqnkxbpxpl.supabase.co'
 
 
-const supabaseKey = ``
+const supabaseKey = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqd3BjY3pxb3RmcW5reGJweHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTgwMDEwMzksImV4cCI6MjAzMzU3NzAzOX0.Ie3bcc5Pkg7PB9FlqhgZhLsBCR9OS7OlT4IQ-9GFqqM`
 
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
-    console.log("Created Client Connection!")
-
+const supabase = createClient(supabaseUrl, supabaseKey)
+console.log("Created Client Connection!")
 
 
 
@@ -79,26 +76,24 @@ app.post("/upload_file", upload.single("avatar") ,async (req,res)=>{
     })
     .on("end", async () => {
         try{
-            for(let i=0;i<tutorials.length;i+=1){
-                await supabase.from('users').insert(
-                        tutorials[i]
-                    );
-            }
+            await Promise.all(tutorials.map((tutorial) => supabase.from('users').insert(tutorial)));
+            console.log("Mujhe")
         }catch(error){
             console.log(error);
         }
 
-        console.log("Ended")
+        console.log("Ended");
+        res.redirect("/");
     });
 
-    res.redirect("/");
+    
 
     }catch(error){
         console.log(error);
     }
 })
 
-async function uploadFile(file) {
+// async function uploadFile(file) {
     // Use the JS library to create a bucket.
     // try{
     // const { data, error } = await supabase.storage.createBucket('avatars', {
@@ -119,7 +114,7 @@ async function uploadFile(file) {
     //   // Handle success
     // }
     
-  }
+//   }
 
 try{
     app.listen(port);

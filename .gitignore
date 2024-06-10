@@ -1,3 +1,4 @@
 /day2/*.orig
 /day3/test_grid.html.orig
-/day5/backend/node_modules/.bin/mime.cmd
+/day5/backend/node_modules
+/day5/backend/uploads
