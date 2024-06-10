@@ -76,8 +76,19 @@ app.post("/upload_file", upload.single("avatar") ,async (req,res)=>{
     })
     .on("end", async () => {
         try{
-            await Promise.all(tutorials.map((tutorial) => supabase.from('users').insert(tutorial)));
-            console.log("Mujhe")
+            const chunkSize = 1000; // Define the chunk size
+            const numChunks = Math.ceil(tutorials.length / chunkSize); // Calculate the number of chunks
+
+            const promises = []; // Create an empty array to store the promises
+
+            for (let i = 0; i < numChunks; i++) {
+            const chunk = tutorials.slice(i * chunkSize, (i + 1) * chunkSize); // Create a chunk of tutorials
+            promises.push(supabase.from('users').insert(chunk)); // Insert the chunk of tutorials using a promise
+            }
+
+        await Promise.all(promises); // Wait for all the promises to resolve
+        
+
         }catch(error){
             console.log(error);
         }
