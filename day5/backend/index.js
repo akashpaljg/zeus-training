@@ -3,24 +3,12 @@ const bodyParser = require("body-parser");
 const multer = require("multer");
 const fs = require("fs");
 const csv = require("fast-csv");
-
-
-const { createClient } = require('@supabase/supabase-js');
-
-
-
-const supabaseUrl = 'https://vjwpcczqotfqnkxbpxpl.supabase.co'
-
-
-const supabaseKey = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqd3BjY3pxb3RmcW5reGJweHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTgwMDEwMzksImV4cCI6MjAzMzU3NzAzOX0.Ie3bcc5Pkg7PB9FlqhgZhLsBCR9OS7OlT4IQ-9GFqqM`
-
-
-const supabase = createClient(supabaseUrl, supabaseKey)
-console.log("Created Client Connection!")
+// import connection from "./dbConfig/mydbConfig";
+const pool = require("./dbConfig/mydbConfig");
 
 
 
-// await client.connect();
+let progress;
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -45,57 +33,71 @@ app.use(express.static('public'))
 
 
 app.get("/",async (req,res)=>{
-    res.render("index",{error:"Hi"})
+    res.render("index",{error:"Hi",table:[null]})
 })
+
 
 
 app.post("/upload_file", upload.single("avatar") ,async (req,res)=>{
     try{
     console.log("Uploaded Successfully");
     console.log(req.file.filename);
+    if(req.file === null){
+        res.render("index",{error:'Please upload file'})
+
+        return;
+    }
     if(req.file.filename.split('.')[1] != "csv"){
         res.render("index",{error:"Please upload csv file"})
         return;
     }
-    // console.log(uniqueSuffix);
-    // let json = csvToJson.getJsonFromCsv(`./uploads/${req.file.filename}`);
-    // for(let i=0; i<10;i++){
-    //     console.log(json[i]);
-    // }
 
     const path = `./uploads/${req.file.filename}`;
     let tutorials = []
 
     fs.createReadStream(path)
-    .pipe(csv.parse({ headers: true }))
+    .pipe(csv.parse())
     .on("error", (error) => {
       throw error.message;
     })
     .on("data", (row) => {
-      tutorials.push({email:row['Email'],first_name:row['First Name'],last_name:row['Last Name'],city:row['City'],country:row['Country']});
+            tutorials.push(row);
     })
     .on("end", async () => {
         try{
-            const chunkSize = 1000; // Define the chunk size
-            const numChunks = Math.ceil(tutorials.length / chunkSize); // Calculate the number of chunks
+            tutorials.shift();
+            console.log(tutorials.length);
+            
+        
 
-            const promises = []; // Create an empty array to store the promises
+            pool.getConnection((err, connection)=> {
+                // connected! (unless `err` is set)
+                if(err){
+                    console.log(err);
+                }else{
+                let query = 'INSERT IGNORE INTO USERSS (id,email,first_name,last_name,city,company) VALUES ?'
+                connection.query(query,[tutorials],(err,res)=>{
+                    if(err){
+                        console.log(err);
+                    }
+                });
+                fs.unlinkSync(path);
 
-            for (let i = 0; i < numChunks; i++) {
-            const chunk = tutorials.slice(i * chunkSize, (i + 1) * chunkSize); // Create a chunk of tutorials
-            promises.push(supabase.from('users').insert(chunk)); // Insert the chunk of tutorials using a promise
-            }
-
-        await Promise.all(promises); // Wait for all the promises to resolve
+                console.log("Delete File successfully.");
+                res.render("index",{error:"Uploaded Successfully!!",table:[null]});
+                }
+              });
+            
         
 
         }catch(error){
+            fs.unlinkSync(path);
             console.log(error);
         }
-
-        console.log("Ended");
-        res.redirect("/");
+        
     });
+
+    
 
     
 
@@ -104,32 +106,29 @@ app.post("/upload_file", upload.single("avatar") ,async (req,res)=>{
     }
 })
 
-// async function uploadFile(file) {
-    // Use the JS library to create a bucket.
-    // try{
-    // const { data, error } = await supabase.storage.createBucket('avatars', {
-    // public: true,
-    // allowedMimeTypes: ['*.csv'],
-    // fileSizeLimit: '20MB',
-    // })
-    // }catch(error){
-    //     console.log("Error while creating buckets")
-    // }
+app.post("/checking",async (req,res)=>{
+    try{
+        console.log(req.body);
+        res.status(200).json({
+            message:"Hi"
+        })
+    }catch(error){
+        console.log(error)
+        res.status(400).json({
+            message:"error"
+        })
+    }
+})
 
-    // const { data, error } = await supabase.storage.from('avatars').upload('/uploads', file)
-    // if (error) {
-    //   // Handle error
-    //   console.log(error)
-    // } else {
-    //     console.log("Successfully inserted data")
-    //   // Handle success
-    // }
+
+
+    app.listen(port,(err)=>{
+        if(err){
+            console.log(err);
+        }else{
+            console.log(`App is running on port: http://localhost:${port}`);
+        }
+    });
+        
     
-//   }
 
-try{
-    app.listen(port);
-    console.log(`App is running on port: http://localhost:${port}`);    
-}catch(error){
-    console.log("App is stopped");
-}
