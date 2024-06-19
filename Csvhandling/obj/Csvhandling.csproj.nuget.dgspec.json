@@ -51,6 +51,18 @@
               "target": "Package",
               "version": "[8.0.6, )"
             },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.6, )"
+            },
+            "Microsoft.EntityFrameworkCore.Tools": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.6, )"
+            },
             "MySql.Data.EntityFrameworkCore": {
               "target": "Package",
               "version": "[8.0.22, )"
@@ -62,6 +74,10 @@
             "MySqlConnector.DependencyInjection": {
               "target": "Package",
               "version": "[2.3.6, )"
+            },
+            "Pomelo.EntityFrameworkCore.MySql": {
+              "target": "Package",
+              "version": "[8.0.2, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

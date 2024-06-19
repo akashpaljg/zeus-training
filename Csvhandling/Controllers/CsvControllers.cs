@@ -1,39 +1,72 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Threading.Tasks;
+using Csvhandling.Data;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using MySqlConnector;
+using Microsoft.EntityFrameworkCore;
 
 namespace Csvhandling.Controllers
 {
     [Route("api/check")]
-        
+    [ApiController]
     public class CsvControllers : ControllerBase
     {
-        [HttpGet]
-        public async Task<IActionResult> GetHello(){
-            using var connection = new MySqlConnection("Server=localhost;User ID=root;Password=password;Database=csvdata");
-            await connection.OpenAsync();
+        private readonly ApplicationDbContext _context;
+        public CsvControllers(ApplicationDbContext dbContext)
+        {
+            _context = dbContext;
+        }
 
-            using var command = new MySqlCommand("SELECT * FROM csvhandle;", connection);
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+        [HttpGet]
+        public IActionResult GetHello()
+        {
+            return Ok("Got");
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetHelloId(int id)
+        {
+            var existUser = await _context.csvData.FirstOrDefaultAsync(s => s.Id == id);
+            if (existUser == null)
             {
-                var value = reader.GetValue(0);
-                Console.WriteLine("---------");
-                Console.WriteLine(reader);
-                Console.WriteLine("---------");
+                return NotFound();
+            }
+            return Ok(existUser);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetFile(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("No file uploaded.");
             }
 
-            return Ok("hello");
-        }
+            try
+            {
+                // Save the file to a temporary location
+                var filePath = Path.GetTempFileName();
+                Console.WriteLine(filePath);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
 
-        [Route("{id}")]
-        [HttpGet]
-        public async Task<IActionResult> GetHelloId(int id){
-            return Ok(id);
-        }
+                // Optionally read the file content
+                using (var reader = new StreamReader(filePath))
+                {
+                    var fileContent = await reader.ReadToEndAsync();
+                    Console.WriteLine(fileContent); // Or process the content as needed
+                }
 
+                return Ok(new { file.ContentType, file.Length, file.FileName });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
+            }
+        }
     }
 }
