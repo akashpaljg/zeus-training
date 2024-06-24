@@ -23,8 +23,8 @@ namespace Csvhandling.Controllers
     public class CsvController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private static  WebSocket _webSocket;
-        private const int BatchSize = 10000;
+        private static readonly Dictionary<int, WebSocket> _websockets = new Dictionary<int, WebSocket>();
+        private int BatchSize ;
 
         public CsvController(ApplicationDbContext dbContext)
         {
@@ -37,52 +37,73 @@ namespace Csvhandling.Controllers
             return Ok("Got");
         }
 
-        [HttpGet("ws")]
-        public async Task GetConnection()
+        [HttpGet("ws/{id}")]
+        public async Task GetConnection(int id)
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                _webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+                var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
                 Console.WriteLine("WebSocket connection established");
-                await Echo();
+
+                lock (_websockets)
+                {
+                    _websockets[id] = webSocket;
+                }
+
+                await Echo(id);
             }
             else
             {
                 Console.WriteLine("WebSocket connection not established");
             }
-            
         }
 
-        private async Task Echo()
+        private async Task Echo(int id)
         {
-            Console.WriteLine("Echo1");
-            byte[]? buffer = new byte[1024 * 4];
-            WebSocketReceiveResult result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            byte[] buffer = new byte[1024 * 4];
+            WebSocket webSocket;
+
+            lock (_websockets)
+            {
+                webSocket = _websockets[id];
+            }
+
+            WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
             while (!result.CloseStatus.HasValue)
             {
-            Console.WriteLine("Echo2");
-
-                await _webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
-                result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             }
-            await _webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+
+            lock (_websockets)
+            {
+                _websockets.Remove(id);
+            }
+
+            await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
         }
 
-        private async Task SendProgress(int percentage)
+        private async Task SendProgress(int id, int percentage)
         {
-            if (_webSocket != null && _webSocket.State == WebSocketState.Open)
+            WebSocket webSocket;
+
+            lock (_websockets)
             {
-               var message = Encoding.UTF8.GetBytes($"{percentage}");
-                await _webSocket.SendAsync(new ArraySegment<byte>(message, 0, message.Length), WebSocketMessageType.Text, true, CancellationToken.None);
+                Console.WriteLine($"I'm in send Progress {id} {percentage}");
+                if (!_websockets.TryGetValue(id, out webSocket) || webSocket.State != WebSocketState.Open)
+                {
+                    Console.WriteLine("Unable to send progress: WebSocket not open or not found.");
+                    return;
+                }
             }
-            else
-            {
-                Console.WriteLine("Unable to send progress: WebSocket not open or not found.");
-            }
+
+            var message = Encoding.UTF8.GetBytes($"{percentage}");
+            await webSocket.SendAsync(new ArraySegment<byte>(message, 0, message.Length), WebSocketMessageType.Text, true, CancellationToken.None);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> UploadCsvFile(IFormFile file)
+        [HttpPost("{id}")]
+        public async Task<IActionResult> UploadCsvFile(int id, IFormFile file)
         {
             if (file == null || file.Length == 0)
             {
@@ -118,8 +139,11 @@ namespace Csvhandling.Controllers
                             models[i].FY2023_24
                         ));
                     }
-
+                    
                     mConnection.Open();
+                    
+                    using var transactions = await mConnection.BeginTransactionAsync();
+                    
                     for (int i = 0; i < Rows.Count; i += BatchSize)
                     {
                         sCommand.Append(string.Join(",", Rows.Skip(i).Take(BatchSize)));
@@ -127,6 +151,7 @@ namespace Csvhandling.Controllers
 
                         using (MySqlCommand myCmd = new MySqlCommand(sCommand.ToString(), mConnection))
                         {
+                            myCmd.Transaction = transactions; // DAP error resolved
                             myCmd.CommandType = System.Data.CommandType.Text;
                             try
                             {
@@ -136,12 +161,15 @@ namespace Csvhandling.Controllers
                             catch (Exception e)
                             {
                                 Console.WriteLine(e.Message);
+                                await transactions.RollbackAsync();
                             }
                         }
 
                         int progress = (int)(((i + BatchSize) / (double)Rows.Count) * 100);
-                        await SendProgress(progress);
+                        Console.WriteLine($"i:{i} BatchSize: {BatchSize} RowsCount: {Rows.Count}");
+                        await SendProgress(id, progress);
                     }
+                    await transactions.CommitAsync();
                 }
             }
 
@@ -175,9 +203,13 @@ namespace Csvhandling.Controllers
                     }
                 }
 
+                BatchSize = models.Count > 100? models.Count/100:models.Count;
+                
+
                 Stopwatch st = new Stopwatch();
                 st.Start();
                 await BulkToMySQLAsync(models);
+                Console.WriteLine(st.Elapsed);
                 st.Stop();
 
                 return Ok(new { file.ContentType, file.Length, file.FileName });
