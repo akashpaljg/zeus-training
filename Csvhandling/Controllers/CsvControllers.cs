@@ -175,31 +175,40 @@ namespace Csvhandling.Controllers
 
             try
             {
-                var stream = new MemoryStream();
-                await file.CopyToAsync(stream);
-                stream.Position = 0;
+                // var stream = new MemoryStream();
+                // await file.CopyToAsync(stream);
+                // stream.Position = 0;
 
                 var models = new List<CsvModel>();
-                using (var reader = new StreamReader(stream))
+                
+                // using (var reader = new StreamReader(stream))
+                 using StreamReader reader = new(file.OpenReadStream(), Encoding.UTF8);
                 {
-                    string line;
-                    bool isHeader = true;
+                    string? line = string.Empty;
+                    // int i = 0;
+                    // read the header
+                    if(!reader.EndOfStream){
+                        reader.ReadLine();
+                    }
 
-                    while ((line = reader.ReadLine()) != null)
+                    while (!reader.EndOfStream)
                     {
-                        if (isHeader)
-                        {
-                            isHeader = false;
-                            continue;
-                        }
+                        
                         try
                         {
-                            models.Add(line.ToCsvData());
+                            line = reader.ReadLine();
+                            if(line != null){
+                               CsvModel? modelData = line.ToCsvData();
+                               
+                               models.Add(modelData);
+                            }
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Error parsing line: {line}. Exception: {ex.Message}");
+                            // Console.WriteLine(i+1);
+                            Console.WriteLine($"Exception in line: {line}, Exception: {ex.Message}");
                         }
+                        // i+=1;
                     }
                 }
 
