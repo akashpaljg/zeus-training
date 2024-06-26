@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using System.Diagnostics;
 using System.Net.WebSockets;
+using Csvhandling.Helper;
 
 namespace Csvhandling.Controllers
 {
@@ -22,88 +23,106 @@ namespace Csvhandling.Controllers
     [ApiController]
     public class CsvController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        // private readonly ApplicationDbContext _context;
         private static readonly Dictionary<int, WebSocket> _websockets = new Dictionary<int, WebSocket>();
         private int BatchSize ;
+        private ILogger _logger;
+        private RabbitListener rabbitListener;
+        private RabbitProducer rabbitProducer;
 
-        public CsvController(ApplicationDbContext dbContext)
+        public CsvController()
         {
-            _context = dbContext;
+            // _context = dbContext; 
+            var _loggerFactory = LoggerFactory.Create(
+            builder => builder
+                        // add console as logging target
+                        .AddConsole()
+                        // add debug output as logging target
+                        .AddDebug()
+                        // set minimum level to log
+                        .SetMinimumLevel(LogLevel.Debug)
+        );
+        _logger = _loggerFactory.CreateLogger<Program>();
+      
+        rabbitProducer = new RabbitProducer("localhost");
         }
 
         [HttpGet]
         public IActionResult GetHello()
         {
+          
+            
+            
             return Ok("Got");
         }
 
-        [HttpGet("ws/{id}")]
-        public async Task GetConnection(int id)
-        {
-            if (HttpContext.WebSockets.IsWebSocketRequest)
-            {
-                var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                Console.WriteLine("WebSocket connection established");
+        // [HttpGet("ws/{id}")]
+        // public async Task GetConnection(int id)
+        // {
+        //     if (HttpContext.WebSockets.IsWebSocketRequest)
+        //     {
+        //         var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+        //         Console.WriteLine("WebSocket connection established");
 
-                lock (_websockets)
-                {
-                    _websockets[id] = webSocket;
-                }
+        //         lock (_websockets)
+        //         {
+        //             _websockets[id] = webSocket;
+        //         }
 
-                await Echo(id);
-            }
-            else
-            {
-                Console.WriteLine("WebSocket connection not established");
-            }
-        }
+        //         await Echo(id);
+        //     }
+        //     else
+        //     {
+        //         Console.WriteLine("WebSocket connection not established");
+        //     }
+        // }
 
-        private async Task Echo(int id)
-        {
-            byte[] buffer = new byte[1024 * 4];
-            WebSocket webSocket;
+        // private async Task Echo(int id)
+        // {
+        //     byte[] buffer = new byte[1024 * 4];
+        //     WebSocket webSocket;
 
-            lock (_websockets)
-            {
-                webSocket = _websockets[id];
-            }
+        //     lock (_websockets)
+        //     {
+        //         webSocket = _websockets[id];
+        //     }
 
-            WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+        //     WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
-            while (!result.CloseStatus.HasValue)
-            {
-                await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
-                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-            }
+        //     while (!result.CloseStatus.HasValue)
+        //     {
+        //         await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+        //         result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+        //     }
 
-            lock (_websockets)
-            {
-                _websockets.Remove(id);
-            }
+        //     lock (_websockets)
+        //     {
+        //         _websockets.Remove(id);
+        //     }
 
-            await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-        }
+        //     await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+        // }
 
-        private async Task SendProgress(int id, int percentage)
-        {
-            WebSocket webSocket;
+        // private async Task SendProgress(int id, int percentage)
+        // {
+        //     WebSocket webSocket;
 
-            lock (_websockets)
-            {
-                Console.WriteLine($"I'm in send Progress {id} {percentage}");
-                if (!_websockets.TryGetValue(id, out webSocket) || webSocket.State != WebSocketState.Open)
-                {
-                    Console.WriteLine("Unable to send progress: WebSocket not open or not found.");
-                    return;
-                }
-            }
+        //     lock (_websockets)
+        //     {
+        //         Console.WriteLine($"I'm in send Progress {id} {percentage}");
+        //         if (!_websockets.TryGetValue(id, out webSocket) || webSocket.State != WebSocketState.Open)
+        //         {
+        //             Console.WriteLine("Unable to send progress: WebSocket not open or not found.");
+        //             return;
+        //         }
+        //     }
 
-            var message = Encoding.UTF8.GetBytes($"{percentage}");
-            await webSocket.SendAsync(new ArraySegment<byte>(message, 0, message.Length), WebSocketMessageType.Text, true, CancellationToken.None);
-        }
+        //     var message = Encoding.UTF8.GetBytes($"{percentage}");
+        //     await webSocket.SendAsync(new ArraySegment<byte>(message, 0, message.Length), WebSocketMessageType.Text, true, CancellationToken.None);
+        // }
 
-        [HttpPost("{id}")]
-        public async Task<IActionResult> UploadCsvFile(int id, IFormFile file)
+        [HttpPost]
+        public async Task<IActionResult> UploadCsvFile( IFormFile file)
         {
             if (file == null || file.Length == 0)
             {
@@ -166,8 +185,8 @@ namespace Csvhandling.Controllers
                         }
 
                         int progress = (int)(((i + BatchSize) / (double)Rows.Count) * 100);
-                        Console.WriteLine($"i:{i} BatchSize: {BatchSize} RowsCount: {Rows.Count}");
-                        await SendProgress(id, progress);
+                        // Console.WriteLine($"i:{i} BatchSize: {BatchSize} RowsCount: {Rows.Count}");
+                        // await SendProgress(id, progress);
                     }
                     await transactions.CommitAsync();
                 }
@@ -175,51 +194,58 @@ namespace Csvhandling.Controllers
 
             try
             {
-                // var stream = new MemoryStream();
+                // MemoryStream? stream = new MemoryStream();
                 // await file.CopyToAsync(stream);
+                
+                
+                
+                Console.WriteLine("registering");
+                await rabbitProducer.Register(file);
+               
                 // stream.Position = 0;
 
-                var models = new List<CsvModel>();
+                // var models = new List<CsvModel>();
                 
                 // using (var reader = new StreamReader(stream))
-                 using StreamReader reader = new(file.OpenReadStream(), Encoding.UTF8);
-                {
-                    string? line = string.Empty;
-                    // int i = 0;
-                    // read the header
-                    if(!reader.EndOfStream){
-                        reader.ReadLine();
-                    }
+                //  using StreamReader reader = new(file.OpenReadStream(), Encoding.UTF8);
+                // {
+                //     string? line = string.Empty;
+                //     // int i = 0;
+                //     // read the header
+                //     if(!reader.EndOfStream){
+                //         reader.ReadLine();
+                //     }
 
-                    while (!reader.EndOfStream)
-                    {
-                        
-                        try
-                        {
-                            line = reader.ReadLine();
-                            if(line != null){
-                               CsvModel? modelData = line.ToCsvData();
+                //     while (!reader.EndOfStream)
+                //     {
+                //         try
+                //         {
+                //             line = reader.ReadLine();
+                //             if(line != null){
+                //                CsvModel? modelData = line.ToCsvData();
                                
-                               models.Add(modelData);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            // Console.WriteLine(i+1);
-                            Console.WriteLine($"Exception in line: {line}, Exception: {ex.Message}");
-                        }
-                        // i+=1;
-                    }
-                }
+                //                models.Add(modelData);
+                //             }
+                //         }
+                //         catch (Exception ex)
+                //         {
+                //             // Console.WriteLine(i+1);
+                //             Console.WriteLine($"Exception in line: {line}, Exception: {ex.Message}");
+                //         }
+                //         // i+=1;
+                //     }
+                // }
 
-                BatchSize = models.Count > 100? models.Count/100:models.Count;
                 
 
-                Stopwatch st = new Stopwatch();
-                st.Start();
-                await BulkToMySQLAsync(models);
-                Console.WriteLine(st.Elapsed);
-                st.Stop();
+                // BatchSize = models.Count > 100? models.Count/100:models.Count;
+                
+
+                // Stopwatch st = new Stopwatch();
+                // st.Start();
+                // await BulkToMySQLAsync(models);
+                // Console.WriteLine(st.Elapsed);
+                // st.Stop();
 
                 return Ok(new { file.ContentType, file.Length, file.FileName });
             }
