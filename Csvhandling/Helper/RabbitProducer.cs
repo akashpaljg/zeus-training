@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
-using Csvhandling.Mappers;
-using Csvhandling.Models;
+using Microsoft.AspNetCore.Http;
 using RabbitMQ.Client;
 
 namespace Csvhandling.Helper
@@ -15,43 +12,46 @@ namespace Csvhandling.Helper
         ConnectionFactory factory { get; set; }
         IConnection connection { get; set; }
         IModel channel { get; set; }
+
         public RabbitProducer(string _hostName)
         {
             factory = new ConnectionFactory { HostName = _hostName };
-            connection = factory.CreateConnection();
-            channel = connection.CreateModel();
+            try
+            {
+                connection = factory.CreateConnection();
+                channel = connection.CreateModel();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error establishing connection: {e.Message}");
+            }
         }
 
-        public async Task Register(IFormFile file ){
-
+        public async Task Register(IFormFile file)
+        {
             Console.WriteLine("I'm registering RabbitProducer");
 
             channel.QueueDeclare(queue: "wello", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
-        //    var stream = new MemoryStream();
-        //    await file.CopyToAsync(stream);
-           StreamReader reader = new(file.OpenReadStream(), Encoding.UTF8);
-
+            using var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8);
             Console.WriteLine("Initialized Stream: Producer");
-            await reader.ReadLineAsync(); 
-            
-            var body = Encoding.UTF8.GetBytes(reader.ReadToEnd().ToString());
+            await reader.ReadLineAsync();
+
+            var body = Encoding.UTF8.GetBytes(await reader.ReadToEndAsync());
 
             Console.WriteLine("Encoded data in queue: Producer");
 
             channel.BasicPublish(exchange: string.Empty,
-                     routingKey: "wello",
-                     basicProperties: null,
-                     body: body);
+                                 routingKey: "wello",
+                                 basicProperties: null,
+                                 body: body);
 
-        Console.WriteLine($" [x] Sent File");
-
-        Console.WriteLine(" Press [enter] to exit.");
-        Console.ReadLine();
+            Console.WriteLine(" [x] Sent File");
         }
 
-        public void Deregister(){
-            this.connection.Close();
+        public void Deregister()
+        {
+            connection.Close();
         }
     }
 }

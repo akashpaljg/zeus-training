@@ -165,6 +165,7 @@ namespace Csvhandling.Controllers
                     
                     for (int i = 0; i < Rows.Count; i += BatchSize)
                     {
+
                         sCommand.Append(string.Join(",", Rows.Skip(i).Take(BatchSize)));
                         sCommand.Append(';');
 
@@ -199,7 +200,7 @@ namespace Csvhandling.Controllers
                 
                 
                 
-                Console.WriteLine("registering");
+                Console.WriteLine("registering");                         
                 await rabbitProducer.Register(file);
                
                 // stream.Position = 0;
@@ -238,7 +239,7 @@ namespace Csvhandling.Controllers
 
                 
 
-                // BatchSize = models.Count > 100? models.Count/100:models.Count;
+                // BatchSize = 1000;
                 
 
                 // Stopwatch st = new Stopwatch();
@@ -246,7 +247,7 @@ namespace Csvhandling.Controllers
                 // await BulkToMySQLAsync(models);
                 // Console.WriteLine(st.Elapsed);
                 // st.Stop();
-
+                Console.WriteLine("Suucessfully");
                 return Ok(new { file.ContentType, file.Length, file.FileName });
             }
             catch (Exception ex)

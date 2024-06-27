@@ -29,75 +29,80 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// if (args.Length > 0 && args[0].ToLower() == "listener")
-// {
-//     try
-//     {
-//         RabbitListener rabbitListener = new RabbitListener("localhost",5672);
-//         rabbitListener.Register();
-//         Console.WriteLine("RabbitMQ Listener Started");
-//     }
-//     catch (Exception ex)
-//     {
-//         Console.WriteLine($"Error starting RabbitMQ listener: {ex.Message}");
-//         throw;
-//     }
-// }else{
-//     CreateHostBuilder(args);
-// }
-
-
-
-// static IHostBuilder CreateHostBuilder(string[] args)
-// {
-//     return Host.CreateDefaultBuilder(args)
-//         .ConfigureWebHostDefaults(webBuilder =>
-//         {
-//             webBuilder.UseStartup<Startup>();
-//             // webBuilder.UseUrls("http://localhost:5000"); 
-//         });
-// }
-
-if (args.Length > 0 && args[0].ToLower() == "worker")
-        {
-            StartWorker();
-        }
-        else
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
- 
- 
-static void StartWorker()
-    {
-        var worker = new RabbitListener("localhost");
-        worker.Register();
-    }
- 
-static IHostBuilder CreateHostBuilder(string[] args)
+// Check if the first argument is "worker"
+if (args.Length > 0)
 {
-    return Host.CreateDefaultBuilder(args)
-        .ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.UseStartup<Startup>();
-        });
+    if (args[0].ToLower() == "worker")
+    {
+        StartWorker();
+    }
+    else if (args[0].ToLower() == "listener")
+    {
+        StartDbListener();
+    }
+    else
+    {
+        StartServer();
+    }
 }
- 
+else
+{
+    StartServer();
+}
 
+static void StartWorker()
+{
+    var worker = new RabbitListener("localhost");
+    try
+    {
+        worker.Register();
+        Console.WriteLine("Workers are running...");
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e.Message);
+    }
 
+    // Keep the worker running
+    while (true)
+    {
+        // Add logic to keep the worker alive
+        System.Threading.Thread.Sleep(1000);
+    }
+}
 
+void StartServer()
+{
+    app.UseWebSockets();
+    app.UseHttpsRedirection();
+    app.UseAuthorization();
+    app.UseCors(builder => builder
+        .AllowAnyOrigin()
+        .AllowAnyMethod()
+        .AllowAnyHeader());
 
+    app.MapControllers();
 
-app.UseWebSockets();
+    app.Run();
+}
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.UseCors(builder => builder
-    .AllowAnyOrigin()
-    .AllowAnyMethod()
-    .AllowAnyHeader());
+static void StartDbListener()
+{
+    RabbitDbListener _rabbitdblistener = new RabbitDbListener("localhost");
+    try
+    {
+        _rabbitdblistener.Register();
+        Console.WriteLine("Listeners are running...");
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e.Message);
+    }
 
-app.MapControllers();
-
-
-app.Run();
+    // Keep the worker running
+    while (true)
+    {
+        // Add logic to keep the worker alive
+        System.Threading.Thread.Sleep(1000);
+    }
+}
