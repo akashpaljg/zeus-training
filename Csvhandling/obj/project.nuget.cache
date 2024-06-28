@@ -1,12 +1,15 @@
 {
   "version": 2,
-  "dgSpecHash": "1J5V8f7Ya2M=",
+  "dgSpecHash": "M5hfO7aJYdY=",
   "success": true,
   "projectFilePath": "C:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\akash.pal\\.nuget\\packages\\awssdk.core\\3.7.100.14\\awssdk.core.3.7.100.14.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\awssdk.securitytoken\\3.7.100.14\\awssdk.securitytoken.3.7.100.14.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\azure.core\\1.35.0\\azure.core.1.35.0.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\azure.identity\\1.10.3\\azure.identity.1.10.3.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\bouncycastle.netcore\\1.8.3\\bouncycastle.netcore.1.8.3.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\dnsclient\\1.6.1\\dnsclient.1.6.1.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\efcore.bulkextensions\\8.0.4\\efcore.bulkextensions.8.0.4.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\google.protobuf\\3.11.4\\google.protobuf.3.11.4.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
@@ -81,7 +84,12 @@
     "C:\\Users\\akash.pal\\.nuget\\packages\\microsoft.sqlserver.server\\1.0.0\\microsoft.sqlserver.server.1.0.0.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\microsoft.sqlserver.types\\160.1000.6\\microsoft.sqlserver.types.160.1000.6.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\microsoft.win32.primitives\\4.0.1\\microsoft.win32.primitives.4.0.1.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\microsoft.win32.registry\\5.0.0\\microsoft.win32.registry.5.0.0.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\microsoft.win32.systemevents\\4.7.0\\microsoft.win32.systemevents.4.7.0.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\mongodb.bson\\2.27.0\\mongodb.bson.2.27.0.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\mongodb.driver\\2.27.0\\mongodb.driver.2.27.0.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\mongodb.driver.core\\2.27.0\\mongodb.driver.core.2.27.0.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\mongodb.libmongocrypt\\1.10.0\\mongodb.libmongocrypt.1.10.0.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\mono.texttemplating\\2.2.1\\mono.texttemplating.2.2.1.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\mysql.data\\8.0.22\\mysql.data.8.0.22.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\mysql.data.entityframeworkcore\\8.0.22\\mysql.data.entityframeworkcore.8.0.22.nupkg.sha512",
@@ -99,6 +107,8 @@
     "C:\\Users\\akash.pal\\.nuget\\packages\\runtime.native.system.io.compression\\4.1.0\\runtime.native.system.io.compression.4.1.0.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\runtime.native.system.net.http\\4.0.1\\runtime.native.system.net.http.4.0.1.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\runtime.native.system.security.cryptography\\4.0.0\\runtime.native.system.security.cryptography.4.0.0.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\sharpcompress\\0.30.1\\sharpcompress.0.30.1.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\snappier\\1.0.0\\snappier.1.0.0.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\sqlitepclraw.core\\2.1.6\\sqlitepclraw.core.2.1.6.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\ssh.net\\2016.1.0\\ssh.net.2016.1.0.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\sshnet.security.cryptography\\1.2.0\\sshnet.security.cryptography.1.2.0.nupkg.sha512",
@@ -196,7 +206,8 @@
     "C:\\Users\\akash.pal\\.nuget\\packages\\system.xml.xmldocument\\4.0.1\\system.xml.xmldocument.4.0.1.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\system.xml.xpath\\4.0.1\\system.xml.xpath.4.0.1.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\system.xml.xpath.xmldocument\\4.0.1\\system.xml.xpath.xmldocument.4.0.1.nupkg.sha512",
-    "C:\\Users\\akash.pal\\.nuget\\packages\\z.entityframework.extensions.efcore\\8.103.0\\z.entityframework.extensions.efcore.8.103.0.nupkg.sha512"
+    "C:\\Users\\akash.pal\\.nuget\\packages\\z.entityframework.extensions.efcore\\8.103.0\\z.entityframework.extensions.efcore.8.103.0.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\zstdsharp.port\\0.7.3\\zstdsharp.port.0.7.3.nupkg.sha512"
   ],
   "logs": []
 }

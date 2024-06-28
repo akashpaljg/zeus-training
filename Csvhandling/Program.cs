@@ -1,10 +1,14 @@
+using BookStoreApi.Services;
 using Csvhandling.Data;
 using Csvhandling.Helper;
+using Csvhandling.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MongoDB.Driver;
 using MySqlConnector;
 using System;
+using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +23,11 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContextPool<ApplicationDbContext>(
     dbContextOptionsBuilder => dbContextOptionsBuilder.UseMySql(connectionString, serverVersion));
+// Add services to the container.
+builder.Services.Configure<StatusStoreDatabaseSettings>(
+    builder.Configuration.GetSection("StatusStoreDatabase"));
+builder.Services.AddSingleton<StatusService>();
+
 
 var app = builder.Build();
 
@@ -34,11 +43,11 @@ if (args.Length > 0)
 {
     if (args[0].ToLower() == "worker")
     {
-        StartWorker();
+        StartWorker().GetAwaiter().GetResult();
     }
     else if (args[0].ToLower() == "listener")
     {
-        StartDbListener();
+        StartDbListener().GetAwaiter().GetResult();
     }
     else
     {
@@ -50,7 +59,7 @@ else
     StartServer();
 }
 
-static void StartWorker()
+static async Task StartWorker()
 {
     var worker = new RabbitListener("localhost");
     try
@@ -67,7 +76,7 @@ static void StartWorker()
     while (true)
     {
         // Add logic to keep the worker alive
-        System.Threading.Thread.Sleep(1000);
+        await Task.Delay(1000);
     }
 }
 
@@ -86,7 +95,7 @@ void StartServer()
     app.Run();
 }
 
-static void StartDbListener()
+static async Task StartDbListener()
 {
     RabbitDbListener _rabbitdblistener = new RabbitDbListener("localhost");
     try
@@ -99,10 +108,10 @@ static void StartDbListener()
         Console.WriteLine(e.Message);
     }
 
-    // Keep the worker running
+    // Keep the listener running
     while (true)
     {
-        // Add logic to keep the worker alive
-        System.Threading.Thread.Sleep(1000);
+        // Add logic to keep the listener alive
+        await Task.Delay(1000);
     }
 }

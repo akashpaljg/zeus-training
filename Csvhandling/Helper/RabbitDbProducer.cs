@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Csvhandling.Models;
 using RabbitMQ.Client;
 
 namespace Csvhandling.Helper
@@ -26,21 +27,17 @@ namespace Csvhandling.Helper
             }
         }
 
-        public async Task Register(string connectionString, StringBuilder command)
+        public async Task Register(List<CsvModel> models)
         {
             Console.WriteLine("I'm registering RabbitDbProducer");
 
             channel.QueueDeclare(queue: "welloDb", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
-            var jsonString = JsonSerializer.Serialize(new ConnectionMessage(connectionString, command.ToString()));
+            var jsonString = JsonSerializer.Serialize(models);
             var body = Encoding.UTF8.GetBytes(jsonString);
 
             Console.WriteLine("Encoded data in queue: RabbitDbProducer");
 
-            var props = channel.CreateBasicProperties();
-            var correlationId = Guid.NewGuid().ToString();
-            props.CorrelationId = correlationId;
-            props.ReplyTo = channel.QueueDeclare().QueueName;
 
             channel.BasicPublish(exchange: string.Empty,
                                  routingKey: "welloDb",

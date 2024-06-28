@@ -16,6 +16,7 @@ using MySqlConnector;
 using System.Diagnostics;
 using System.Net.WebSockets;
 using Csvhandling.Helper;
+using BookStoreApi.Services;
 
 namespace Csvhandling.Controllers
 {
@@ -29,10 +30,12 @@ namespace Csvhandling.Controllers
         private ILogger _logger;
         private RabbitListener rabbitListener;
         private RabbitProducer rabbitProducer;
+        private readonly StatusService _statusService;
 
-        public CsvController()
+        public CsvController(StatusService statusService)
         {
             // _context = dbContext; 
+            Console.WriteLine(statusService);
             var _loggerFactory = LoggerFactory.Create(
             builder => builder
                         // add console as logging target
@@ -45,81 +48,22 @@ namespace Csvhandling.Controllers
         _logger = _loggerFactory.CreateLogger<Program>();
       
         rabbitProducer = new RabbitProducer("localhost");
+        _statusService = statusService;
         }
 
         [HttpGet]
-        public IActionResult GetHello()
+        public async Task<IActionResult> GetHello()
         {
-          
-            
+            try{
+                Console.WriteLine("getting connection");
+                Console.WriteLine(await _statusService.GetAsync());
+                Console.WriteLine("connection established");
+            }catch(Exception e){
+                Console.WriteLine(e.Message);
+            }
             
             return Ok("Got");
         }
-
-        // [HttpGet("ws/{id}")]
-        // public async Task GetConnection(int id)
-        // {
-        //     if (HttpContext.WebSockets.IsWebSocketRequest)
-        //     {
-        //         var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-        //         Console.WriteLine("WebSocket connection established");
-
-        //         lock (_websockets)
-        //         {
-        //             _websockets[id] = webSocket;
-        //         }
-
-        //         await Echo(id);
-        //     }
-        //     else
-        //     {
-        //         Console.WriteLine("WebSocket connection not established");
-        //     }
-        // }
-
-        // private async Task Echo(int id)
-        // {
-        //     byte[] buffer = new byte[1024 * 4];
-        //     WebSocket webSocket;
-
-        //     lock (_websockets)
-        //     {
-        //         webSocket = _websockets[id];
-        //     }
-
-        //     WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
-        //     while (!result.CloseStatus.HasValue)
-        //     {
-        //         await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
-        //         result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-        //     }
-
-        //     lock (_websockets)
-        //     {
-        //         _websockets.Remove(id);
-        //     }
-
-        //     await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-        // }
-
-        // private async Task SendProgress(int id, int percentage)
-        // {
-        //     WebSocket webSocket;
-
-        //     lock (_websockets)
-        //     {
-        //         Console.WriteLine($"I'm in send Progress {id} {percentage}");
-        //         if (!_websockets.TryGetValue(id, out webSocket) || webSocket.State != WebSocketState.Open)
-        //         {
-        //             Console.WriteLine("Unable to send progress: WebSocket not open or not found.");
-        //             return;
-        //         }
-        //     }
-
-        //     var message = Encoding.UTF8.GetBytes($"{percentage}");
-        //     await webSocket.SendAsync(new ArraySegment<byte>(message, 0, message.Length), WebSocketMessageType.Text, true, CancellationToken.None);
-        // }
 
         [HttpPost]
         public async Task<IActionResult> UploadCsvFile( IFormFile file)
@@ -129,124 +73,20 @@ namespace Csvhandling.Controllers
                 return BadRequest("No file uploaded.");
             }
 
+
+            
+
             var filePath = Path.GetTempFileName();
-
-            async Task BulkToMySQLAsync(List<CsvModel> models)
-            {
-                StringBuilder sCommand = new StringBuilder("REPLACE INTO csvdata (Id,EmailId,Name,Country,State,City,TelephoneNumber,AddressLine1,AddressLine2,DateOfBirth,FY2019_20,FY2020_21,FY2021_22,FY2022_23,FY2023_24) VALUES ");
-                String sCommand2 = sCommand.ToString();
-                using (MySqlConnection mConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true"))
-                {
-                    List<string> Rows = new List<string>();
-                    for (int i = 0; i < models.Count; i++)
-                    {
-                        Rows.Add(string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
-                            models[i].Id,
-                            MySqlHelper.EscapeString(models[i].EmailId),
-                            MySqlHelper.EscapeString(models[i].Name),
-                            MySqlHelper.EscapeString(models[i].Country),
-                            MySqlHelper.EscapeString(models[i].State),
-                            MySqlHelper.EscapeString(models[i].City),
-                            MySqlHelper.EscapeString(models[i].TelephoneNumber),
-                            MySqlHelper.EscapeString(models[i].AddressLine1),
-                            MySqlHelper.EscapeString(models[i].AddressLine2),
-                            models[i].DateOfBirth.ToString("yyyy-MM-dd"),
-                            models[i].FY2019_20,
-                            models[i].FY2020_21,
-                            models[i].FY2021_22,
-                            models[i].FY2022_23,
-                            models[i].FY2023_24
-                        ));
-                    }
-                    
-                    mConnection.Open();
-                    
-                    using var transactions = await mConnection.BeginTransactionAsync();
-                    
-                    for (int i = 0; i < Rows.Count; i += BatchSize)
-                    {
-
-                        sCommand.Append(string.Join(",", Rows.Skip(i).Take(BatchSize)));
-                        sCommand.Append(';');
-
-                        using (MySqlCommand myCmd = new MySqlCommand(sCommand.ToString(), mConnection))
-                        {
-                            myCmd.Transaction = transactions; // DAP error resolved
-                            myCmd.CommandType = System.Data.CommandType.Text;
-                            try
-                            {
-                                await myCmd.ExecuteNonQueryAsync();
-                                sCommand = new StringBuilder(sCommand2);
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine(e.Message);
-                                await transactions.RollbackAsync();
-                            }
-                        }
-
-                        int progress = (int)(((i + BatchSize) / (double)Rows.Count) * 100);
-                        // Console.WriteLine($"i:{i} BatchSize: {BatchSize} RowsCount: {Rows.Count}");
-                        // await SendProgress(id, progress);
-                    }
-                    await transactions.CommitAsync();
-                }
+            using(var stream = new FileStream(filePath,FileMode.Create)){
+                await file.CopyToAsync(stream);
             }
+
 
             try
             {
-                // MemoryStream? stream = new MemoryStream();
-                // await file.CopyToAsync(stream);
-                
-                
-                
-                Console.WriteLine("registering");                         
-                await rabbitProducer.Register(file);
-               
-                // stream.Position = 0;
-
-                // var models = new List<CsvModel>();
-                
-                // using (var reader = new StreamReader(stream))
-                //  using StreamReader reader = new(file.OpenReadStream(), Encoding.UTF8);
-                // {
-                //     string? line = string.Empty;
-                //     // int i = 0;
-                //     // read the header
-                //     if(!reader.EndOfStream){
-                //         reader.ReadLine();
-                //     }
-
-                //     while (!reader.EndOfStream)
-                //     {
-                //         try
-                //         {
-                //             line = reader.ReadLine();
-                //             if(line != null){
-                //                CsvModel? modelData = line.ToCsvData();
-                               
-                //                models.Add(modelData);
-                //             }
-                //         }
-                //         catch (Exception ex)
-                //         {
-                //             // Console.WriteLine(i+1);
-                //             Console.WriteLine($"Exception in line: {line}, Exception: {ex.Message}");
-                //         }
-                //         // i+=1;
-                //     }
-                // }
-
-                
-
-                // BatchSize = 1000;
-                
-
-                // Stopwatch st = new Stopwatch();
-                // st.Start();
-                // await BulkToMySQLAsync(models);
-                // Console.WriteLine(st.Elapsed);
-                // st.Stop();
+                Console.WriteLine("registering");                        
+                Console.WriteLine(filePath); 
+                await rabbitProducer.Register(filePath);
                 Console.WriteLine("Suucessfully");
                 return Ok(new { file.ContentType, file.Length, file.FileName });
             }
@@ -254,13 +94,6 @@ namespace Csvhandling.Controllers
             {
                 Console.WriteLine(ex.StackTrace);
                 return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
-            }
-            finally
-            {
-                if (System.IO.File.Exists(filePath))
-                {
-                    System.IO.File.Delete(filePath);
-                }
             }
         }
     }

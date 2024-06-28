@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Csvhandling.Models;
 using MySql.Data.MySqlClient;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -35,40 +36,67 @@ namespace Csvhandling.Helper
             channel.QueueDeclare(queue: "welloDb", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
             var consumer = new EventingBasicConsumer(channel);
+            channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
             consumer.Received += async (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
-                ConnectionMessage? connectionMessage = JsonSerializer.Deserialize<ConnectionMessage>(message);
+                List<CsvModel>? connectionMessage = JsonSerializer.Deserialize<List<CsvModel>>(message);
                 // Console.WriteLine($"Message received: Command={connectionMessage?.Command}, ConnectionString={connectionMessage?.ConnectionString}");
 
-                if (connectionMessage != null)
+                if (connectionMessage.Count != 0)
                 {
                     Stopwatch st = new Stopwatch();
                     st.Start();
-                    await Process(connectionMessage.Command, connectionMessage.ConnectionString);
+                    await Process(connectionMessage);
                     Console.WriteLine($"Processing time: {st.Elapsed}");
+                    st.Stop();
                 }
                 
 
                 channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
-
+                
                 // Optionally, send an acknowledgment message back to the producer here.
             };
 
             channel.BasicConsume(queue: "welloDb", autoAck: false, consumer: consumer);
         }
 
-        public async Task Process(string sCommand, string connectionString)
+        public async Task Process(List<CsvModel> models)
         {
             try
             {
-                using (var mConnection = new MySqlConnection(connectionString))
-                {
+
+            var sCommand = new StringBuilder("REPLACE INTO csvdata (Id,EmailId,Name,Country,State,City,TelephoneNumber,AddressLine1,AddressLine2,DateOfBirth,FY2019_20,FY2020_21,FY2021_22,FY2022_23,FY2023_24) VALUES ");
+
+            using var mConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true");
+
+            var rows = models.Select(model => 
+                string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
+                    model.Id,
+                    MySqlHelper.EscapeString(model.EmailId),
+                    MySqlHelper.EscapeString(model.Name),
+                    MySqlHelper.EscapeString(model.Country),
+                    MySqlHelper.EscapeString(model.State),
+                    MySqlHelper.EscapeString(model.City),
+                    MySqlHelper.EscapeString(model.TelephoneNumber),
+                    MySqlHelper.EscapeString(model.AddressLine1),
+                    MySqlHelper.EscapeString(model.AddressLine2),
+                    model.DateOfBirth.ToString("yyyy-MM-dd"),
+                    model.FY2019_20,
+                    model.FY2020_21,
+                    model.FY2021_22,
+                    model.FY2022_23,
+                    model.FY2023_24)).ToList();
+
+                // using (var mConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true")
+                // {
+
+                    sCommand.Append(string.Join(",", rows));
                     await mConnection.OpenAsync();
                     using var transactions = await mConnection.BeginTransactionAsync();
 
-                    using (var myCmd = new MySqlCommand(sCommand, mConnection))
+                    using (var myCmd = new MySqlCommand(sCommand.ToString(), mConnection))
                     {
                         myCmd.CommandType = System.Data.CommandType.Text;
                         try
@@ -85,7 +113,7 @@ namespace Csvhandling.Helper
                         }
                     }
                     await mConnection.CloseAsync();
-                }
+                // }
             }
             catch (Exception e)
             {

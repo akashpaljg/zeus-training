@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,23 +15,20 @@ namespace Csvhandling.Helper
 {
     public class RabbitListener
     {
-        ConnectionFactory factory { get; set; }
-        IConnection connection { get; set; }
-        IModel channel { get; set; }
-        private RabbitDbProducer _rabbitdbproducer;
-       
+        private readonly ConnectionFactory _factory;
+        private IConnection _connection;
+        private IModel _channel;
+        private readonly RabbitDbProducer _rabbitDbProducer;
+        private const int BatchSize = 10000;
 
-        private int BatchSize = 0;
-
-        public RabbitListener(string _hostName)
+        public RabbitListener(string hostName)
         {
-            factory = new ConnectionFactory() { HostName = _hostName };
+            _factory = new ConnectionFactory() { HostName = hostName };
             try
             {
-                connection = factory.CreateConnection();
-                channel = connection.CreateModel();
-                _rabbitdbproducer = new RabbitDbProducer("localhost");
-                
+                _connection = _factory.CreateConnection();
+                _channel = _connection.CreateModel();
+                _rabbitDbProducer = new RabbitDbProducer(hostName);
             }
             catch (Exception e)
             {
@@ -40,115 +38,100 @@ namespace Csvhandling.Helper
 
         public void Register()
         {
-            
             Console.WriteLine("I'm registering");
-            channel.QueueDeclare(queue: "wello", durable: false, exclusive: false, autoDelete: false, arguments: null);
+            _channel.QueueDeclare(queue: "wello", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
-            var consumer = new EventingBasicConsumer(channel);
+            var consumer = new EventingBasicConsumer(_channel);
+            _channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
             consumer.Received += async (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 Console.WriteLine("Message received");
                 await ProcessStreamMessage(message);
-                channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-                channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+            
+                _channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
             };
 
-            channel.BasicConsume(queue: "wello", autoAck: false, consumer: consumer);
+            _channel.BasicConsume(queue: "wello", autoAck: false, consumer: consumer);
         }
 
-        public async Task ProcessStreamMessage(string message)
+        public async Task ProcessStreamMessage(string filePath)
         {
-            StringReader reader = new StringReader(message);
-            string line;
-            var models = new List<CsvModel>();
+            List<CsvModel> models = new List<CsvModel>();
 
-            while ((line = reader.ReadLine()) != null)
+            try
             {
-                try
+                using var stream = new FileStream(filePath, FileMode.Open);
+                using var reader = new StreamReader(stream);
+                string line;
+                await reader.ReadLineAsync(); // Skip header
+
+                while ((line = reader.ReadLine()) != null)
                 {
-                    CsvModel? modelData = line.ToCsvData();
-                    models.Add(modelData);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Error parsing CSV data: {e.Message}");
-                }
-            }
-
-            // BatchSize = models.Count > 100 ? models.Count / 100 : models.Count;
-            BatchSize = 1000;
-
-            
-            await BulkToMySQLAsync(models);
-            
-            
-        }
-
-        async Task BulkToMySQLAsync(List<CsvModel> models)
-        {
-            StringBuilder sCommand = new StringBuilder("REPLACE INTO csvdata (Id,EmailId,Name,Country,State,City,TelephoneNumber,AddressLine1,AddressLine2,DateOfBirth,FY2019_20,FY2020_21,FY2021_22,FY2022_23,FY2023_24) VALUES ");
-            String sCommand2 = sCommand.ToString();
-            using (MySqlConnection mConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true"))
-            {
-                List<string> Rows = new List<string>();
-                for (int i = 0; i < models.Count; i++)
-                {
-                    Rows.Add(string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
-                        models[i].Id,
-                        MySqlHelper.EscapeString(models[i].EmailId),
-                        MySqlHelper.EscapeString(models[i].Name),
-                        MySqlHelper.EscapeString(models[i].Country),
-                        MySqlHelper.EscapeString(models[i].State),
-                        MySqlHelper.EscapeString(models[i].City),
-                        MySqlHelper.EscapeString(models[i].TelephoneNumber),
-                        MySqlHelper.EscapeString(models[i].AddressLine1),
-                        MySqlHelper.EscapeString(models[i].AddressLine2),
-                        models[i].DateOfBirth.ToString("yyyy-MM-dd"),
-                        models[i].FY2019_20,
-                        models[i].FY2020_21,
-                        models[i].FY2021_22,
-                        models[i].FY2022_23,
-                        models[i].FY2023_24
-                    ));
-                }
-                
-
-
-                for (int i = 0; i < Rows.Count; i += BatchSize)
-                {
-                    if(Rows.Count-i >= BatchSize){
-                        sCommand.Append(string.Join(",",Rows.Skip(i).Take(BatchSize) ));
-                    }else{
-                        BatchSize = Rows.Count-i;
-                        sCommand.Append(string.Join(",",Rows.Skip(i).Take(BatchSize) ));
+                    try
+                    {
+                        var modelData = line.ToCsvData();
+                        models.Add(modelData);
                     }
-                    sCommand.Append(';');
-                    Console.Write($"Batch {i+1}");
-                    
-                    // using (MySqlCommand myCmd = new MySqlCommand(sCommand.ToString(), mConnection))
-                    // {
-                    //     myCmd.Transaction = transactions; // DAP error resolved
-                    //     myCmd.CommandType = System.Data.CommandType.Text;
-                    //     try
-                    //     {
-                    //         await myCmd.ExecuteNonQueryAsync();
-                    //         sCommand = new StringBuilder(sCommand2);
-                    //     }
-                    //     catch (Exception e)
-                    //     {
-                    //         Console.WriteLine($"Error executing SQL command: {e.Message}");
-                    //         await transactions.RollbackAsync();
-                           
-                    //     }
-                    // }
-                    
-                    await _rabbitdbproducer.Register("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true",sCommand);
-                    sCommand = new StringBuilder(sCommand2);
-                    
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Error parsing CSV data: {e.Message}");
+                    }
                 }
             }
-        } 
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error processing file: {e.Message}");
+            }
+            finally
+            {
+                // Ensure the file stream is closed before attempting to delete the file
+                if (File.Exists(filePath))
+                {
+                    try
+                    {
+                        Console.WriteLine("========");
+                        Console.WriteLine($"File Deleted {filePath}");
+                        Console.WriteLine("========");
+                        File.Delete(filePath);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Error deleting file: {e.Message}");
+                    }
+                }
+            }
+
+            await BulkToMySQLAsync(models);
+        }
+
+        private async Task BulkToMySQLAsync(List<CsvModel> models)
+        {
+            var rows = models.Select(model => 
+                string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
+                    model.Id,
+                    MySqlHelper.EscapeString(model.EmailId),
+                    MySqlHelper.EscapeString(model.Name),
+                    MySqlHelper.EscapeString(model.Country),
+                    MySqlHelper.EscapeString(model.State),
+                    MySqlHelper.EscapeString(model.City),
+                    MySqlHelper.EscapeString(model.TelephoneNumber),
+                    MySqlHelper.EscapeString(model.AddressLine1),
+                    MySqlHelper.EscapeString(model.AddressLine2),
+                    model.DateOfBirth.ToString("yyyy-MM-dd"),
+                    model.FY2019_20,
+                    model.FY2020_21,
+                    model.FY2021_22,
+                    model.FY2022_23,
+                    model.FY2023_24)).ToList();
+
+            for (int i = 0; i < rows.Count; i += BatchSize)
+            {
+
+                // await _rabbitDbProducer.Register("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true", sCommand);
+                await _rabbitDbProducer.Register(models.Skip(i).Take(BatchSize).ToList());
+            }
+        }
     }
 }

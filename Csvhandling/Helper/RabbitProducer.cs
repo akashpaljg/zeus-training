@@ -27,17 +27,17 @@ namespace Csvhandling.Helper
             }
         }
 
-        public async Task Register(IFormFile file)
+        public async Task Register(string filePath)
         {
             Console.WriteLine("I'm registering RabbitProducer");
 
             channel.QueueDeclare(queue: "wello", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
-            using var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8);
-            Console.WriteLine("Initialized Stream: Producer");
-            await reader.ReadLineAsync();
+            // using var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8);
+            // Console.WriteLine("Initialized Stream: Producer");
+            // await reader.ReadLineAsync();
 
-            var body = Encoding.UTF8.GetBytes(await reader.ReadToEndAsync());
+            var body = Encoding.UTF8.GetBytes(filePath);
 
             Console.WriteLine("Encoded data in queue: Producer");
 
