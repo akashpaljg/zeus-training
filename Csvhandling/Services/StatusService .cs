@@ -11,6 +11,8 @@ public class StatusService
     public StatusService(
         IOptions<StatusStoreDatabaseSettings> bookStoreDatabaseSettings)
     {
+
+        Console.WriteLine(bookStoreDatabaseSettings.Value.ConnectionString);
             var mongoClient = new MongoClient(
             bookStoreDatabaseSettings.Value.ConnectionString);
 
