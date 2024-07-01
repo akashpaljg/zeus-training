@@ -7,6 +7,18 @@ using RabbitMQ.Client;
 
 namespace Csvhandling.Helper
 {
+
+    public class BatchWithid{
+        public List<CsvModel> lists { get; set; }
+        public int BatchId {get;set;}
+        public int StatusId {get;set;}
+
+        public BatchWithid()
+        {
+            lists = new List<CsvModel>();
+        }
+        
+    }
     public class RabbitDbProducer
     {
         ConnectionFactory factory { get; set; }
@@ -27,20 +39,25 @@ namespace Csvhandling.Helper
             }
         }
 
-        public async Task Register(List<CsvModel> models)
+        public async Task Register(List<CsvModel> models,int BId,int Id)
         {
             Console.WriteLine("I'm registering RabbitDbProducer");
 
-            channel.QueueDeclare(queue: "welloDb", durable: false, exclusive: false, autoDelete: false, arguments: null);
-
-            var jsonString = JsonSerializer.Serialize(models);
+            channel.QueueDeclare(queue: "welloDb1", durable: false, exclusive: false, autoDelete: false, arguments: null);
+            BatchWithid B_U_Id = new BatchWithid(){
+                BatchId = BId,
+                lists = models,
+                StatusId = Id
+            };
+            
+            var jsonString = JsonSerializer.Serialize(B_U_Id);
             var body = Encoding.UTF8.GetBytes(jsonString);
 
             Console.WriteLine("Encoded data in queue: RabbitDbProducer");
 
 
             channel.BasicPublish(exchange: string.Empty,
-                                 routingKey: "welloDb",
+                                 routingKey: "welloDb1",
                                  basicProperties: null,
                                  body: body);
 

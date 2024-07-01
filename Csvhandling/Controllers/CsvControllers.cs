@@ -54,39 +54,35 @@ namespace Csvhandling.Controllers
         [HttpGet]
         public async Task<IActionResult> GetHello()
         {
-            try{
-                Console.WriteLine("getting connection");
-                Console.WriteLine(await _statusService.GetAsync());
-                Console.WriteLine("connection established");
-            }catch(Exception e){
-                Console.WriteLine(e.Message);
-            }
-            
             return Ok("Got");
         }
 
-        [HttpPost]
-        public async Task<IActionResult> UploadCsvFile( IFormFile file)
+        [HttpPost("{id}")]
+        public async Task<IActionResult> UploadCsvFile( IFormFile file,string id)
         {
             if (file == null || file.Length == 0)
             {
                 return BadRequest("No file uploaded.");
             }
 
-
-            
+            Console.WriteLine(id);
 
             var filePath = Path.GetTempFileName();
             using(var stream = new FileStream(filePath,FileMode.Create)){
                 await file.CopyToAsync(stream);
             }
 
-
             try
             {
                 Console.WriteLine("registering");                        
                 Console.WriteLine(filePath); 
-                await rabbitProducer.Register(filePath);
+                await _statusService.InsertStatus(id,"Waiting");
+                int a = await _statusService.GetId(id);
+                Console.WriteLine("=======");
+                Console.WriteLine(a);
+                Console.WriteLine("=======");
+                
+                await rabbitProducer.Register(filePath,a);
                 Console.WriteLine("Suucessfully");
                 return Ok(new { file.ContentType, file.Length, file.FileName });
             }

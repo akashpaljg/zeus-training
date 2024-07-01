@@ -17,6 +17,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 var serverVersion = new MySqlServerVersion(new Version(8, 0, 37));
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -24,8 +26,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContextPool<ApplicationDbContext>(
     dbContextOptionsBuilder => dbContextOptionsBuilder.UseMySql(connectionString, serverVersion));
 // Add services to the container.
-builder.Services.Configure<StatusStoreDatabaseSettings>(
-    builder.Configuration.GetSection("StatusStoreDatabase"));
+// builder.Services.Configure<StatusStoreDatabaseSettings>(
+//     builder.Configuration.GetSection("StatusStoreDatabase"));
 builder.Services.AddSingleton<StatusService>();
 
 
@@ -43,11 +45,11 @@ if (args.Length > 0)
 {
     if (args[0].ToLower() == "worker")
     {
-        StartWorker().GetAwaiter().GetResult();
+        StartWorker(app).GetAwaiter().GetResult();
     }
     else if (args[0].ToLower() == "listener")
     {
-        StartDbListener().GetAwaiter().GetResult();
+        StartDbListener(app).GetAwaiter().GetResult();
     }
     else
     {
@@ -59,9 +61,12 @@ else
     StartServer();
 }
 
-static async Task StartWorker()
+static async Task StartWorker(WebApplication app)
 {
-    var worker = new RabbitListener("localhost");
+    var logger = app.Services.GetRequiredService<ILogger<RabbitListener>>();
+    var statusService = app.Services.GetRequiredService<StatusService>();
+
+    var worker = new RabbitListener("localhost",statusService,logger);
     try
     {
         worker.Register();
@@ -95,9 +100,11 @@ void StartServer()
     app.Run();
 }
 
-static async Task StartDbListener()
+static async Task StartDbListener(WebApplication app)
 {
-    RabbitDbListener _rabbitdblistener = new RabbitDbListener("localhost");
+    var logger = app.Services.GetRequiredService<ILogger<RabbitDbListener>>();
+    var statusService = app.Services.GetRequiredService<StatusService>();
+    RabbitDbListener _rabbitdblistener = new RabbitDbListener("localhost",statusService,logger);
     try
     {
         _rabbitdblistener.Register();

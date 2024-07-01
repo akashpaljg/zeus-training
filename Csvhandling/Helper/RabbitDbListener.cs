@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using BookStoreApi.Services;
 using Csvhandling.Models;
 using MySql.Data.MySqlClient;
 using RabbitMQ.Client;
@@ -16,13 +17,19 @@ namespace Csvhandling.Helper
         IConnection connection { get; set; }
         IModel channel { get; set; }
 
-        public RabbitDbListener(string _hostName)
+        StatusService _statusService;
+
+        ILogger<RabbitDbListener> _logger;
+
+        public RabbitDbListener(string _hostName,StatusService service,ILogger<RabbitDbListener> logger)
         {
             factory = new ConnectionFactory() { HostName = _hostName };
             try
             {
                 connection = factory.CreateConnection();
                 channel = connection.CreateModel();
+                _statusService = service;
+                _logger = logger;
             }
             catch (Exception e)
             {
@@ -33,7 +40,7 @@ namespace Csvhandling.Helper
         public void Register()
         {
             Console.WriteLine("I'm registering Db listener");
-            channel.QueueDeclare(queue: "welloDb", durable: false, exclusive: false, autoDelete: false, arguments: null);
+            channel.QueueDeclare(queue: "welloDb1", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
             var consumer = new EventingBasicConsumer(channel);
             channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
@@ -41,14 +48,14 @@ namespace Csvhandling.Helper
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
-                List<CsvModel>? connectionMessage = JsonSerializer.Deserialize<List<CsvModel>>(message);
+                BatchWithid? connectionMessage = JsonSerializer.Deserialize<BatchWithid>(message);
                 // Console.WriteLine($"Message received: Command={connectionMessage?.Command}, ConnectionString={connectionMessage?.ConnectionString}");
-
-                if (connectionMessage.Count != 0)
+                // Console.WriteLine(connectionMessage);
+                if (connectionMessage.lists.Count != 0)
                 {
                     Stopwatch st = new Stopwatch();
                     st.Start();
-                    await Process(connectionMessage);
+                    await Process(connectionMessage.lists,connectionMessage.BatchId,connectionMessage.StatusId);
                     Console.WriteLine($"Processing time: {st.Elapsed}");
                     st.Stop();
                 }
@@ -59,10 +66,10 @@ namespace Csvhandling.Helper
                 // Optionally, send an acknowledgment message back to the producer here.
             };
 
-            channel.BasicConsume(queue: "welloDb", autoAck: false, consumer: consumer);
+            channel.BasicConsume(queue: "welloDb1", autoAck: false, consumer: consumer);
         }
 
-        public async Task Process(List<CsvModel> models)
+        public async Task Process(List<CsvModel> models,int BId,int Id)
         {
             try
             {
@@ -103,6 +110,7 @@ namespace Csvhandling.Helper
                         {
                               myCmd.Transaction = transactions;
                             await myCmd.ExecuteNonQueryAsync();
+                            await _statusService.UpdateBatchStatus(BId,Id,"Processed");
                             Console.WriteLine("Command executed successfully.");
                             await transactions.CommitAsync();
                         }

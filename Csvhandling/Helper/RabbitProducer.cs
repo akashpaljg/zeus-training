@@ -1,25 +1,23 @@
 using System;
-using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using RabbitMQ.Client;
 
 namespace Csvhandling.Helper
 {
     public class RabbitProducer
     {
-        ConnectionFactory factory { get; set; }
-        IConnection connection { get; set; }
-        IModel channel { get; set; }
+        private readonly ConnectionFactory _factory;
+        private readonly IConnection _connection;
+        private readonly IModel _channel;
 
-        public RabbitProducer(string _hostName)
+        public RabbitProducer(string hostName)
         {
-            factory = new ConnectionFactory { HostName = _hostName };
+            _factory = new ConnectionFactory { HostName = hostName };
             try
             {
-                connection = factory.CreateConnection();
-                channel = connection.CreateModel();
+                _connection = _factory.CreateConnection();
+                _channel = _connection.CreateModel();
             }
             catch (Exception e)
             {
@@ -27,31 +25,27 @@ namespace Csvhandling.Helper
             }
         }
 
-        public async Task Register(string filePath)
+        public async Task Register(string filePath, int id)
         {
-            Console.WriteLine("I'm registering RabbitProducer");
+            Console.WriteLine($"I'm registering RabbitProducer Id: {id}");
 
-            channel.QueueDeclare(queue: "wello", durable: false, exclusive: false, autoDelete: false, arguments: null);
+            _channel.QueueDeclare(queue: "wello2", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
-            // using var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8);
-            // Console.WriteLine("Initialized Stream: Producer");
-            // await reader.ReadLineAsync();
-
-            var body = Encoding.UTF8.GetBytes(filePath);
+            var body = Encoding.UTF8.GetBytes($"{filePath}|{id}");
 
             Console.WriteLine("Encoded data in queue: Producer");
 
-            channel.BasicPublish(exchange: string.Empty,
-                                 routingKey: "wello",
-                                 basicProperties: null,
-                                 body: body);
+            _channel.BasicPublish(exchange: string.Empty,
+                                  routingKey: "wello2",
+                                  basicProperties: null,
+                                  body: body);
 
             Console.WriteLine(" [x] Sent File");
         }
 
         public void Deregister()
         {
-            connection.Close();
+            _connection.Close();
         }
     }
 }

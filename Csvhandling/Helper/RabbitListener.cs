@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BookStoreApi.Services;
 using Csvhandling.Mappers;
 using Csvhandling.Models;
+using Microsoft.Extensions.Logging;
 using MySql.Data.MySqlClient;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -21,7 +22,10 @@ namespace Csvhandling.Helper
         private readonly RabbitDbProducer _rabbitDbProducer;
         private const int BatchSize = 10000;
 
-        public RabbitListener(string hostName)
+        private readonly StatusService _statusService;
+        private readonly ILogger<RabbitListener> _logger;
+
+        public RabbitListener(string hostName, StatusService service, ILogger<RabbitListener> logger)
         {
             _factory = new ConnectionFactory() { HostName = hostName };
             try
@@ -29,6 +33,8 @@ namespace Csvhandling.Helper
                 _connection = _factory.CreateConnection();
                 _channel = _connection.CreateModel();
                 _rabbitDbProducer = new RabbitDbProducer(hostName);
+                _statusService = service;
+                _logger = logger;
             }
             catch (Exception e)
             {
@@ -39,24 +45,52 @@ namespace Csvhandling.Helper
         public void Register()
         {
             Console.WriteLine("I'm registering");
-            _channel.QueueDeclare(queue: "wello", durable: false, exclusive: false, autoDelete: false, arguments: null);
+            _channel.QueueDeclare(queue: "wello2", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
             var consumer = new EventingBasicConsumer(_channel);
             _channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+        
             consumer.Received += async (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
-                Console.WriteLine("Message received");
-                await ProcessStreamMessage(message);
-            
-                _channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                Console.WriteLine($"Message received {message}");
+
+                
+
+                try
+                {
+                    var msgParts = message.Split('|');
+                    Console.WriteLine(msgParts);
+                    if (msgParts.Length != 2)
+
+                    {
+                        throw new FormatException("Message format is incorrect.");
+                    }
+
+                    string filePath = msgParts[0];
+                    int id = int.Parse(msgParts[1]);
+                    // if (!int.TryParse(msgParts[1], out int id))
+                    // {
+                    //     throw new FormatException("Message ID is not a valid integer.");
+                    // }
+
+                    await _statusService.ProcessingUploadingStatus(id, "Processing");
+                    await ProcessStreamMessage(filePath, id);
+
+                    _channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error processing message: {ex.Message}");
+                    _channel.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, requeue: true);
+                }
             };
 
-            _channel.BasicConsume(queue: "wello", autoAck: false, consumer: consumer);
+            _channel.BasicConsume(queue: "wello2", autoAck: false, consumer: consumer);
         }
 
-        public async Task ProcessStreamMessage(string filePath)
+        public async Task ProcessStreamMessage(string filePath, int id)
         {
             List<CsvModel> models = new List<CsvModel>();
 
@@ -64,9 +98,9 @@ namespace Csvhandling.Helper
             {
                 using var stream = new FileStream(filePath, FileMode.Open);
                 using var reader = new StreamReader(stream);
-                string line;
                 await reader.ReadLineAsync(); // Skip header
 
+                string line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     try
@@ -86,14 +120,11 @@ namespace Csvhandling.Helper
             }
             finally
             {
-                // Ensure the file stream is closed before attempting to delete the file
                 if (File.Exists(filePath))
                 {
                     try
                     {
-                        Console.WriteLine("========");
                         Console.WriteLine($"File Deleted {filePath}");
-                        Console.WriteLine("========");
                         File.Delete(filePath);
                     }
                     catch (Exception e)
@@ -102,13 +133,15 @@ namespace Csvhandling.Helper
                     }
                 }
             }
-
-            await BulkToMySQLAsync(models);
+                     int totalBatches = (int)Math.Ceiling(models.Count / (double)BatchSize);
+                     _logger.LogWarning($"BatchSize : {totalBatches}");
+            await _statusService.UpdateStatus(totalBatches,"Uploading", id);
+            await BulkToMySQLAsync(models,id);
         }
 
-        private async Task BulkToMySQLAsync(List<CsvModel> models)
+        private async Task BulkToMySQLAsync(List<CsvModel> models,int id)
         {
-            var rows = models.Select(model => 
+            var rows = models.Select(model =>
                 string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
                     model.Id,
                     MySqlHelper.EscapeString(model.EmailId),
@@ -125,13 +158,20 @@ namespace Csvhandling.Helper
                     model.FY2021_22,
                     model.FY2022_23,
                     model.FY2023_24)).ToList();
-
+            int c = 1;
             for (int i = 0; i < rows.Count; i += BatchSize)
             {
-
-                // await _rabbitDbProducer.Register("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true", sCommand);
-                await _rabbitDbProducer.Register(models.Skip(i).Take(BatchSize).ToList());
+                Batch batch = new Batch(){
+                    BId = c,
+                    BatchStatus = "Queuing",
+                    BatchStart = i,
+                    BatchEnd = i+BatchSize
+                };
+                await _statusService.UpdateStatus(batch,"Batching",id);
+                // await _rabbitDbProducer.Register(models.Skip(i).Take(BatchSize).ToList(),c,id);
             }
+
+            
         }
     }
 }
