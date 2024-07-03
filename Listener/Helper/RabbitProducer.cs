@@ -33,7 +33,7 @@ namespace Listener.Helper
             }
         }
 
-        public async Task Register(List<CsvModel> models)
+        public async Task Register(List<CsvModel> models,string uid,string fid,string bid)
         {
             Console.WriteLine("I'm registering RabbitDbProducer");
 
@@ -41,7 +41,7 @@ namespace Listener.Helper
    
             
             var jsonString = JsonSerializer.Serialize(models);
-            var body = Encoding.UTF8.GetBytes(jsonString);
+            var body = Encoding.UTF8.GetBytes($"{jsonString}|{uid}|{fid}|{bid}");
 
             Console.WriteLine("Encoded data in queue: RabbitDbProducer");
 

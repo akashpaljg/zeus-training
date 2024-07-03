@@ -1,0 +1,5 @@
+C:\Users\akash.pal\Desktop\practice\DBListeners\obj\Debug\net8.0\DBListeners.csproj.AssemblyReference.cache
+C:\Users\akash.pal\Desktop\practice\DBListeners\obj\Debug\net8.0\DBListeners.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\akash.pal\Desktop\practice\DBListeners\obj\Debug\net8.0\DBListeners.AssemblyInfoInputs.cache
+C:\Users\akash.pal\Desktop\practice\DBListeners\obj\Debug\net8.0\DBListeners.AssemblyInfo.cs
+C:\Users\akash.pal\Desktop\practice\DBListeners\obj\Debug\net8.0\DBListeners.csproj.CoreCompileInputs.cache

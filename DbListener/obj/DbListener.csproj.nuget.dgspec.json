@@ -59,6 +59,18 @@
               "target": "Package",
               "version": "[8.0.0, )"
             },
+            "Microsoft.Extensions.Logging.Console": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Logging.Debug": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "MongoDB.Driver": {
+              "target": "Package",
+              "version": "[2.27.0, )"
+            },
             "MySql.Data": {
               "target": "Package",
               "version": "[9.0.0, )"
@@ -66,6 +78,14 @@
             "MySqlConnector": {
               "target": "Package",
               "version": "[2.3.7, )"
+            },
+            "Polly": {
+              "target": "Package",
+              "version": "[8.4.1, )"
+            },
+            "Polly.Contrib.WaitAndRetry": {
+              "target": "Package",
+              "version": "[1.1.1, )"
             },
             "RabbitMQ.Client": {
               "target": "Package",

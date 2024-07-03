@@ -1,59 +1,116 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
+using Microsoft.Extensions.Logging;
+using MySql.Data.MySqlClient;
+using Polly;
+using Polly.Contrib.WaitAndRetry;
+using Polly.Retry;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Listener.Models;
-using Listener.Mappers;
-using MySql.Data.MySqlClient;
 using Listener.Helper;
+using Listener.Mappers;
+using Listener.Service;
 
-var factory = new ConnectionFactory { HostName = "localhost" };
-
-RabbitProducer _producer = new RabbitProducer();
-
- var connection = factory.CreateConnection();
- var channel = connection.CreateModel();
-Console.WriteLine("Started...");
-
-channel.QueueDeclare(queue: "wello2", durable: false, exclusive: false, autoDelete: false, arguments: null);
-
-var consumer = new EventingBasicConsumer(channel);
-channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-
-consumer.Received += (model, ea) =>
+public class RabbitListener
 {
-    var body = ea.Body.ToArray();
-    var message = Encoding.UTF8.GetString(body);
-    Console.WriteLine($"Message received: {message}");
+    private static readonly AsyncRetryPolicy _retryPolicy;
+    private static ILogger<RabbitListener> _logger;
 
-    try{
-        var msgParts = message.Split("|");
-        Console.WriteLine(msgParts);
-        string filePath = msgParts[0];
-        int id = int.Parse(msgParts[1]);
+    private static StatusService _statusService;
+    static RabbitListener()
+    {
+        var _loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder
+                .AddConsole()
+                .AddDebug()
+                .SetMinimumLevel(LogLevel.Debug);
+        });
 
-        ProcessStreamMessage(filePath, id);
-    }catch(Exception e){
-        Console.WriteLine(e.Message);
-    }
-    // Acknowledge the message
-    channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
-};
+        _logger = _loggerFactory.CreateLogger<RabbitListener>();
 
-channel.BasicConsume(queue: "wello2", autoAck: false, consumer: consumer);
-
-
-async Task ProcessStreamMessage(string filePath, int id){
-    List<CsvModel> models = new List<CsvModel>();
-
-    try{
-        using var stream = new FileStream(filePath,FileMode.Open);
-        using var reader = new StreamReader(stream);
-        await reader.ReadLineAsync();
-
-        string line;
-        while ((line = reader.ReadLine()) != null)
+        var delay = Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), retryCount: 5);
+        _retryPolicy = Policy
+            .Handle<Exception>()
+            .WaitAndRetryAsync(delay, (exception, timeSpan, retryCount, context) =>
             {
+                _logger.LogError($"Retry {retryCount} encountered an error: {exception.Message}. Waiting {timeSpan} before next retry.");
+            });
+
+        _statusService = new StatusService();
+    }
+
+    public static async Task Main(string[] args)
+    {
+        var factory = new ConnectionFactory { HostName = "localhost" };
+        IConnection connection = null!;
+        IModel channel = null!;
+
+        await _retryPolicy.ExecuteAsync(async () =>
+        {
+            connection = factory.CreateConnection();
+            channel = connection.CreateModel();
+            await Task.CompletedTask;
+        });
+
+        Console.WriteLine("Started...");
+
+        await _retryPolicy.ExecuteAsync(async ()=>{
+
+        channel.QueueDeclare(queue: "wello2", durable: false, exclusive: false, autoDelete: false, arguments: null);
+
+        var consumer = new EventingBasicConsumer(channel);
+        channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+
+        consumer.Received += async (model, ea) =>
+        {
+            var body = ea.Body.ToArray();
+            var message = Encoding.UTF8.GetString(body);
+
+            Console.WriteLine($"Message received: {message}");
+
+            try
+            {
+                var msgParts = message.Split("|");
+                string filePath = msgParts[0];
+                string uid = msgParts[1];
+                string fid = msgParts[2];
+                await _statusService.UpdateStatus(uid,fid,"Processing");
+                await ProcessStreamMessage(filePath, uid, fid);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error processing message: {e.Message}");
+            }
+
+            // Acknowledge the message
+            channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+        };
+        
+
+        channel.BasicConsume(queue: "wello2", autoAck: false, consumer: consumer);
+  });
+        Console.WriteLine("Press [Enter] to exit");
+        Console.ReadLine();
+    }
+
+    private static async Task ProcessStreamMessage(string filePath, string uid,string fid)
+    {
+        List<CsvModel> models = new List<CsvModel>();
+
+        try
+        {
+            using (var stream = await _retryPolicy.ExecuteAsync(async () =>
+            {
+                return new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            }))
+            using (var reader = new StreamReader(stream))
+            {
+                await reader.ReadLineAsync(); // Read header line
+
+                string line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
                     try
                     {
                         var modelData = line.ToCsvData();
@@ -61,58 +118,82 @@ async Task ProcessStreamMessage(string filePath, int id){
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Error parsing CSV data: {e.Message}");
+                        _logger.LogError($"Error parsing CSV data: {e.Message}");
                     }
+                }
             }
-    }catch(Exception e){
-        Console.WriteLine(e.Message);
-    }finally{
-        if(File.Exists(filePath)){
-            try{
-                File.Delete(filePath);
-            }catch(Exception e){
-                Console.WriteLine(e.Message);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError($"Error processing file: {e.Message}");
+        }
+        finally
+        {
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    await _retryPolicy.ExecuteAsync(async () =>
+                    {
+                        File.Delete(filePath);
+                        await Task.CompletedTask;
+                    });
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Error deleting file: {e.Message}");
+                }
             }
+        }
+
+        int totalBatches = (int)Math.Ceiling(models.Count / 10000.0);
+        Console.WriteLine(totalBatches);
+        await _statusService.UpdateTotalBatches(uid,fid,totalBatches);
+         await _statusService.UpdateStatus(uid,fid,"Batching");
+        await BulkToMySQLAsync(models, uid,fid);
+    }
+
+    private static async Task BulkToMySQLAsync(List<CsvModel> models, string uid,string fid)
+    {
+        var rows = models.Select(model =>
+            string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
+                model.Id,
+                MySqlHelper.EscapeString(model.EmailId),
+                MySqlHelper.EscapeString(model.Name),
+                MySqlHelper.EscapeString(model.Country),
+                MySqlHelper.EscapeString(model.State),
+                MySqlHelper.EscapeString(model.City),
+                MySqlHelper.EscapeString(model.TelephoneNumber),
+                MySqlHelper.EscapeString(model.AddressLine1),
+                MySqlHelper.EscapeString(model.AddressLine2),
+                model.DateOfBirth.ToString("yyyy-MM-dd"),
+                model.FY2019_20,
+                model.FY2020_21,
+                model.FY2021_22,
+                model.FY2022_23,
+                model.FY2023_24)).ToList();
+
+        RabbitProducer _producer = new RabbitProducer();
+        int batchSize = 10000;
+        await _statusService.UpdateStatus(uid,fid,"Uplaoding");
+       
+
+        for (int i = 0; i < rows.Count; i += batchSize)
+        {
+             Batch newBatch = new Batch{
+                BId = Guid.NewGuid().ToString(),
+                BatchStart = i,
+                BatchEnd = i+batchSize,
+                BatchStatus = "Pending"
+             };
+
+             await _statusService.AddBatch(uid,fid,newBatch);
+            Console.WriteLine($"Batch {i / batchSize + 1}");
+
+            await _retryPolicy.ExecuteAsync(async () =>
+            {
+                await _producer.Register(models.Skip(i).Take(batchSize).ToList(),uid,fid,newBatch.BId);
+            });
         }
     }
-     int totalBatches = (int)Math.Ceiling(models.Count / 10000.0);
-     Console.WriteLine(totalBatches);
-      await BulkToMySQLAsync(models,id);
- }
-
-  async Task BulkToMySQLAsync(List<CsvModel> models,int id)
-        {
-            var rows = models.Select(model =>
-                string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
-                    model.Id,
-                    MySqlHelper.EscapeString(model.EmailId),
-                    MySqlHelper.EscapeString(model.Name),
-                    MySqlHelper.EscapeString(model.Country),
-                    MySqlHelper.EscapeString(model.State),
-                    MySqlHelper.EscapeString(model.City),
-                    MySqlHelper.EscapeString(model.TelephoneNumber),
-                    MySqlHelper.EscapeString(model.AddressLine1),
-                    MySqlHelper.EscapeString(model.AddressLine2),
-                    model.DateOfBirth.ToString("yyyy-MM-dd"),
-                    model.FY2019_20,
-                    model.FY2020_21,
-                    model.FY2021_22,
-                    model.FY2022_23,
-                    model.FY2023_24)).ToList();
-            int c = 1;
-            for (int i = 0; i < rows.Count; i += 10000)
-            {
-
-                Console.WriteLine(c);
-                 c++;
-                 
-                // await _rabbitDbProducer.Register(models.Skip(i).Take(BatchSize).ToList());
-                await _producer.Register(models.Skip(i).Take(10000).ToList());
-            }
-           
-
-            
-        }
-
-Console.WriteLine("Press [Enter] to exit");
-Console.ReadLine();
+}
