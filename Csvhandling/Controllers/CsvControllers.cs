@@ -16,7 +16,10 @@ using MySqlConnector;
 using System.Diagnostics;
 using System.Net.WebSockets;
 using Csvhandling.Helper;
-using BookStoreApi.Services;
+using Polly;
+using Polly.Contrib.WaitAndRetry;
+using Polly.Retry;
+using Csvhandling.Services;
 
 namespace Csvhandling.Controllers
 {
@@ -24,66 +27,90 @@ namespace Csvhandling.Controllers
     [ApiController]
     public class CsvController : ControllerBase
     {
-        // private readonly ApplicationDbContext _context;
-        private static readonly Dictionary<int, WebSocket> _websockets = new Dictionary<int, WebSocket>();
         private int BatchSize ;
         private ILogger _logger;
-        private RabbitListener rabbitListener;
         private RabbitProducer rabbitProducer;
-        private readonly StatusService _statusService;
+        private readonly AsyncRetryPolicy _retryPolicy;
 
-        public CsvController(StatusService statusService)
+        private StatusService _statusService;
+
+        public CsvController(StatusService _service)
         {
-            // _context = dbContext; 
-            Console.WriteLine(statusService);
             var _loggerFactory = LoggerFactory.Create(
-            builder => builder
-                        // add console as logging target
-                        .AddConsole()
-                        // add debug output as logging target
-                        .AddDebug()
-                        // set minimum level to log
-                        .SetMinimumLevel(LogLevel.Debug)
-        );
-        _logger = _loggerFactory.CreateLogger<Program>();
-      
-        rabbitProducer = new RabbitProducer("localhost");
-        _statusService = statusService;
+                builder => builder
+                    .AddConsole()
+                    .AddDebug()
+                    .SetMinimumLevel(LogLevel.Debug)
+            );
+            _logger = _loggerFactory.CreateLogger<Program>();
+
+            rabbitProducer = new RabbitProducer("localhost");
+         
+
+            // Define a jitter-based retry policy with Polly
+            var delay = Backoff.DecorrelatedJitterBackoffV2(medianFirstRetryDelay: TimeSpan.FromSeconds(1), retryCount: 5);
+            _retryPolicy = Policy
+                .Handle<Exception>() // Handle all exceptions
+                .WaitAndRetryAsync(delay, 
+                    (exception, timeSpan, retryCount, context) => 
+                    {
+                        _logger.LogError($"Retry {retryCount} encountered an error: {exception.Message}. Waiting {timeSpan} before next retry.");
+                    }
+                );
+                _statusService = _service;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetHello()
         {
+            try{
+                var a = await _statusService.GetAsync();
+                Console.WriteLine(a);
+                _logger.LogInformation("Successfully Executed Comamnd");
+            }catch(Exception e){
+                _logger.LogError($"Error in exceuting command {e.Message}");
+            }
             return Ok("Got");
         }
 
-        [HttpPost("{id}")]
-        public async Task<IActionResult> UploadCsvFile( IFormFile file,string id)
+        [HttpPost]
+        public async Task<IActionResult> UploadCsvFile([FromForm] IFormFile file, [FromForm] string id1, [FromForm] string id2)
         {
+            _logger.LogWarning(id1.ToString());
             if (file == null || file.Length == 0)
             {
                 return BadRequest("No file uploaded.");
             }
-
-            Console.WriteLine(id);
-
+            Console.WriteLine("=======");
+            Console.WriteLine(id1);
+            Console.WriteLine(id2);
+            Console.WriteLine("=======");
             var filePath = Path.GetTempFileName();
-            using(var stream = new FileStream(filePath,FileMode.Create)){
-                await file.CopyToAsync(stream);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    await file.CopyToAsync(stream);
+                });
             }
 
             try
             {
-                Console.WriteLine("registering");                        
-                Console.WriteLine(filePath); 
-                await _statusService.InsertStatus(id,"Waiting");
-                int a = await _statusService.GetId(id);
+                Console.WriteLine("registering");
+                Console.WriteLine(filePath);
+                await _statusService.InsertStatus(id1,id2, "Waiting");
+                // int statusId = await _statusService.GetId(id);
                 Console.WriteLine("=======");
-                Console.WriteLine(a);
+                Console.WriteLine(1);
                 Console.WriteLine("=======");
-                
-                await rabbitProducer.Register(filePath,a);
-                Console.WriteLine("Suucessfully");
+
+                // Apply the Polly retry policy to the RabbitMQ registration
+                await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    await rabbitProducer.Register(filePath, id1,id2);
+                });
+
+                Console.WriteLine("Successfully");
                 return Ok(new { file.ContentType, file.Length, file.FileName });
             }
             catch (Exception ex)

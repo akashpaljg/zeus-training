@@ -200,3 +200,6 @@ C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\ZstdSharp.dll
 C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\runtimes\linux\native\libmongocrypt.so
 C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\runtimes\osx\native\libmongocrypt.dylib
 C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\runtimes\win\native\mongocrypt.dll
+C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\Polly.dll
+C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\Polly.Core.dll
+C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\Polly.Contrib.WaitAndRetry.dll
