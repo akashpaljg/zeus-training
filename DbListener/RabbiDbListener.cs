@@ -127,10 +127,12 @@ public class RabbitDbListener
                 sCommand.Append(string.Join(",", rows));
 
                 using var mConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true");
+            
+
+                await _retryPolicy.ExecuteAsync(async ()=>{
+
                 await mConnection.OpenAsync();
-
-                 await _retryPolicy.ExecuteAsync(async ()=>{
-
+                
                 using var transaction = await mConnection.BeginTransactionAsync();
 
                 using (var myCmd = new MySqlCommand(sCommand.ToString(), mConnection, transaction))
@@ -144,6 +146,7 @@ public class RabbitDbListener
                         });
                         Console.WriteLine("Batch Inserted successfully.");
                         await transaction.CommitAsync();
+                         await _statusService.UpdateBatchCount(uid,fid);
                         await _statusService.UpdateBatchStatus(uid,fid,bid,"Completed");
                     }
                     catch (Exception e)
@@ -153,9 +156,12 @@ public class RabbitDbListener
                         await transaction.RollbackAsync();
                     }
                 }
-                 });
+               
+                 await mConnection.CloseAsync();
+
+                });
                 
-                await mConnection.CloseAsync();
+               
 
                 await _statusService.Check(uid,fid);
             }

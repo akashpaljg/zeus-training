@@ -27,16 +27,20 @@ namespace Csvhandling.Models
         public string? Id { get; set; }
 
         [BsonElement("UId")]
-        public string UId { get; set; }
+        public string UId { get; set; } = string.Empty;
         
         [BsonElement("FId")]
-        public string FId { get; set; }
+        public string FId { get; set; } = string.Empty;
 
         [BsonElement("Status")]
-        public string Status { get; set; } = null!;
+        public string Status { get; set; } = string.Empty;
 
         [BsonElement("TotalBatches")]
         public int TotalBatches { get; set; }
+
+        
+        [BsonElement("BatchCount")]
+        public int BatchCount {get;set;}
 
         [BsonElement("Batches")]
         public List<Batch> Batches { get; set; } = [];

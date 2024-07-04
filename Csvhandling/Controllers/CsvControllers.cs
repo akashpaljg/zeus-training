@@ -61,16 +61,27 @@ namespace Csvhandling.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetHello()
+        [Route("status/{id1}/{fid}")]
+        public async Task<IActionResult> GetHello(string id1,string fid)
         {
             try{
-                var a = await _statusService.GetAsync();
-                Console.WriteLine(a);
-                _logger.LogInformation("Successfully Executed Comamnd");
+                // var a = await _statusService.GetAsync();
+                Console.WriteLine("=====Status Get=====");
+                Console.WriteLine(id1);
+                Console.WriteLine(fid);
+                Console.WriteLine("=====Status Get=====");
+
+                 var a = await _statusService.GetStatus(id1,fid);
+                 var progress = await _statusService.GetBatchProgress(id1,fid);
+                 Console.WriteLine(a);
+                    _logger.LogInformation("Successfully Executed Comamnd");
+                     return Ok(new {status=a,progress=progress});
+                 
+                
             }catch(Exception e){
                 _logger.LogError($"Error in exceuting command {e.Message}");
+                return BadRequest("Error occured");
             }
-            return Ok("Got");
         }
 
         [HttpPost]

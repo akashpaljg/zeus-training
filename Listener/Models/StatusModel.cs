@@ -40,6 +40,10 @@ namespace Listener.Models
         [BsonElement("TotalBatches")]
         public int TotalBatches { get; set; }
 
+        
+        [BsonElement("BatchCount")]
+        public int BatchCount {get;set;}
+
         [BsonElement("Batches")]
         public List<Batch> Batches { get; set; } = [];
     }

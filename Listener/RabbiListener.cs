@@ -182,12 +182,13 @@ public class RabbitListener
         {
              Batch newBatch = new Batch{
                 BId = Guid.NewGuid().ToString(),
-                BatchStart = i,
+                BatchStart = i+1,
                 BatchEnd = i+batchSize,
                 BatchStatus = "Pending"
              };
 
              await _statusService.AddBatch(uid,fid,newBatch);
+             
             Console.WriteLine($"Batch {i / batchSize + 1}");
 
             await _retryPolicy.ExecuteAsync(async () =>
