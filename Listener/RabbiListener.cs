@@ -10,6 +10,8 @@ using Listener.Models;
 using Listener.Helper;
 using Listener.Mappers;
 using Listener.Service;
+using System.Data;
+
 
 public class RabbitListener
 {
@@ -153,6 +155,13 @@ public class RabbitListener
         await BulkToMySQLAsync(models, uid,fid);
     }
 
+    private static int Mini(int a, int b){
+        if(a<b){
+            return a;
+        }
+        return b;
+    }
+
     private static async Task BulkToMySQLAsync(List<CsvModel> models, string uid,string fid)
     {
         var rows = models.Select(model =>
@@ -183,17 +192,18 @@ public class RabbitListener
              Batch newBatch = new Batch{
                 BId = Guid.NewGuid().ToString(),
                 BatchStart = i+1,
-                BatchEnd = i+batchSize,
+                BatchEnd = Mini(i+batchSize,rows.Count),
                 BatchStatus = "Pending"
              };
 
-             await _statusService.AddBatch(uid,fid,newBatch);
              
             Console.WriteLine($"Batch {i / batchSize + 1}");
 
             await _retryPolicy.ExecuteAsync(async () =>
             {
+                
                 await _producer.Register(models.Skip(i).Take(batchSize).ToList(),uid,fid,newBatch.BId);
+                 await _statusService.AddBatch(uid,fid,newBatch);
             });
         }
     }

@@ -53,12 +53,12 @@ public class RabbitDbListener
             {
                 connection = factory.CreateConnection();
                 channel = connection.CreateModel();
-                await Task.CompletedTask;
+                // await Task.CompletedTask;
             });
 
             Console.WriteLine("Db listener Started...");
             await _retryPolicy.ExecuteAsync(async ()=>{
-                channel.QueueDeclare(queue: "welloDb1", durable: false, exclusive: false, autoDelete: false, arguments: null);
+                channel.QueueDeclare(queue: "welloDb2", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
             var consumer = new EventingBasicConsumer(channel);
             channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
@@ -94,7 +94,7 @@ public class RabbitDbListener
             
                 channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
             };
-            channel.BasicConsume(queue: "welloDb1", autoAck: false, consumer: consumer);
+            channel.BasicConsume(queue: "welloDb2", autoAck: false, consumer: consumer);
   });
             Console.WriteLine("Press [Enter] to exit");
             Console.ReadLine();
@@ -123,7 +123,6 @@ public class RabbitDbListener
                         model.FY2021_22,
                         model.FY2022_23,
                         model.FY2023_24)).ToList();
-
                 sCommand.Append(string.Join(",", rows));
 
                 using var mConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true");
@@ -131,33 +130,30 @@ public class RabbitDbListener
 
                 await _retryPolicy.ExecuteAsync(async ()=>{
 
-                await mConnection.OpenAsync();
-                
-                using var transaction = await mConnection.BeginTransactionAsync();
+                    await mConnection.OpenAsync();
+                    
+                    using var transaction = await mConnection.BeginTransactionAsync();
 
-                using (var myCmd = new MySqlCommand(sCommand.ToString(), mConnection, transaction))
-                {
-                    myCmd.CommandType = System.Data.CommandType.Text;
-                    try
+                    using (var myCmd = new MySqlCommand(sCommand.ToString(), mConnection, transaction))
                     {
-                        await _retryPolicy.ExecuteAsync(async () =>
+                        myCmd.CommandType = System.Data.CommandType.Text;
+                        try
                         {
                             await myCmd.ExecuteNonQueryAsync();
-                        });
-                        Console.WriteLine("Batch Inserted successfully.");
-                        await transaction.CommitAsync();
-                         await _statusService.UpdateBatchCount(uid,fid);
-                        await _statusService.UpdateBatchStatus(uid,fid,bid,"Completed");
+                            await transaction.CommitAsync();
+                            Console.WriteLine("Batch Inserted successfully.");
+                            await _statusService.UpdateBatchCount(uid,fid);
+                            await _statusService.UpdateBatchStatus(uid,fid,bid,"Completed");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($"Error Inserting Batch: {e.Message}");
+                            await _statusService.UpdateBatchStatus(uid,fid,bid,"Error");
+                            await transaction.RollbackAsync();
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine($"Error Inserting Batch: {e.Message}");
-                         await _statusService.UpdateBatchStatus(uid,fid,bid,"Error");
-                        await transaction.RollbackAsync();
-                    }
-                }
-               
-                 await mConnection.CloseAsync();
+                
+                    await mConnection.CloseAsync();
 
                 });
                 

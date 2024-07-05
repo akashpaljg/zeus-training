@@ -37,7 +37,7 @@ namespace Listener.Helper
         {
             Console.WriteLine("I'm registering RabbitDbProducer");
 
-            channel.QueueDeclare(queue: "welloDb1", durable: false, exclusive: false, autoDelete: false, arguments: null);
+            channel.QueueDeclare(queue: "welloDb2", durable: false, exclusive: false, autoDelete: false, arguments: null);
    
             
             var jsonString = JsonSerializer.Serialize(models);
@@ -47,7 +47,7 @@ namespace Listener.Helper
 
 
             channel.BasicPublish(exchange: string.Empty,
-                                 routingKey: "welloDb1",
+                                 routingKey: "welloDb2",
                                  basicProperties: null,
                                  body: body);
 
