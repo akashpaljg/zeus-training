@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "YHmZkKLXxn4=",
+  "dgSpecHash": "LGZmeD6/pB4=",
   "success": true,
   "projectFilePath": "C:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
   "expectedPackageFiles": [
@@ -9,6 +9,7 @@
     "C:\\Users\\akash.pal\\.nuget\\packages\\azure.core\\1.35.0\\azure.core.1.35.0.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\azure.identity\\1.10.3\\azure.identity.1.10.3.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\bouncycastle.netcore\\1.8.3\\bouncycastle.netcore.1.8.3.nupkg.sha512",
+    "C:\\Users\\akash.pal\\.nuget\\packages\\dapper\\2.1.35\\dapper.2.1.35.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\dnsclient\\1.6.1\\dnsclient.1.6.1.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\efcore.bulkextensions\\8.0.4\\efcore.bulkextensions.8.0.4.nupkg.sha512",
     "C:\\Users\\akash.pal\\.nuget\\packages\\google.protobuf\\3.11.4\\google.protobuf.3.11.4.nupkg.sha512",

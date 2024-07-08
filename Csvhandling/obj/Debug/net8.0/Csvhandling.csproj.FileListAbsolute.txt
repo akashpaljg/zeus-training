@@ -203,3 +203,4 @@ C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\runtimes\win\na
 C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\Polly.dll
 C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\Polly.Core.dll
 C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\Polly.Contrib.WaitAndRetry.dll
+C:\Users\akash.pal\Desktop\practice\Csvhandling\bin\Debug\net8.0\Dapper.dll

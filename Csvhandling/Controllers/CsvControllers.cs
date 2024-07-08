@@ -20,6 +20,11 @@ using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
 using Csvhandling.Services;
+using EFCore.BulkExtensions.SqlAdapters.MySql;
+// using MySql.Data.MySqlClient;
+using System.Data.Common;
+using System.Data;
+using Dapper;
 
 namespace Csvhandling.Controllers
 {
@@ -75,9 +80,25 @@ namespace Csvhandling.Controllers
                  var progress = await _statusService.GetBatchProgress(id1,fid);
                  Console.WriteLine(a);
                     _logger.LogInformation("Successfully Executed Comamnd");
-                     return Ok(new {status=a,progress=progress});
-                 
-                
+                    
+                    if(a == "Completed"){
+                        using var mConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true");
+
+                        await mConnection.OpenAsync();
+                        
+                        var query = "SELECT * FROM csvdata LIMIT 10";
+                        _logger.LogInformation("Query Ran for Selecting data");
+                        var csvData = await mConnection.QueryAsync<CsvModel>(query);
+
+                        // Console.WriteLine(csvData);
+
+                        await mConnection.CloseAsync();
+
+                    // Console.WriteLine("connection Established");
+                    return Ok(new {status=a,progress=progress,data=csvData});
+                   
+                    }
+                    return Ok(new {status=a,progress=progress,data=new List<CsvModel>()});
             }catch(Exception e){
                 _logger.LogError($"Error in exceuting command {e.Message}");
                 return BadRequest("Error occured");
