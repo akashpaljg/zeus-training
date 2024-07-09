@@ -39,6 +39,8 @@ namespace Csvhandling.Controllers
 
         private StatusService _statusService;
 
+        private MySqlConnection _mySqlConnection;
+
         public CsvController(StatusService _service)
         {
             var _loggerFactory = LoggerFactory.Create(
@@ -63,6 +65,7 @@ namespace Csvhandling.Controllers
                     }
                 );
                 _statusService = _service;
+                _mySqlConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password");
         }
 
         [HttpGet]
@@ -80,30 +83,42 @@ namespace Csvhandling.Controllers
                  var progress = await _statusService.GetBatchProgress(id1,fid);
                  Console.WriteLine(a);
                     _logger.LogInformation("Successfully Executed Comamnd");
-                    
-                    if(a == "Completed"){
-                        using var mConnection = new MySqlConnection("server=localhost;port=3306;database=csvhandle;user=root;password=password;AllowUserVariables=true");
-
-                        await mConnection.OpenAsync();
-                        
-                        var query = "SELECT * FROM csvdata LIMIT 10";
-                        _logger.LogInformation("Query Ran for Selecting data");
-                        var csvData = await mConnection.QueryAsync<CsvModel>(query);
-
-                        // Console.WriteLine(csvData);
-
-                        await mConnection.CloseAsync();
-
-                    // Console.WriteLine("connection Established");
-                    return Ok(new {status=a,progress=progress,data=csvData});
-                   
-                    }
-                    return Ok(new {status=a,progress=progress,data=new List<CsvModel>()});
+                  
+                    return Ok(new {status=a,progress=progress});
             }catch(Exception e){
                 _logger.LogError($"Error in exceuting command {e.Message}");
                 return BadRequest("Error occured");
             }
         }
+
+        [HttpGet]
+        [Route("data")]
+        public async Task<IActionResult> GetData()
+        {
+            try{
+                Console.WriteLine("=====Data Get=====");
+
+                await _retryPolicy.ExecuteAsync(async ()=>{
+                    
+                    await _mySqlConnection.OpenAsync();
+                    
+                    _logger.LogInformation("Connection established");
+                });
+                
+
+
+                    var csvData = await _mySqlConnection.QueryAsync<CsvModel>("select * from csvhandle.csvdata limit 10;");
+                    return Ok(new {data= csvData}); 
+                
+
+                }catch(Exception e){
+                    _logger.LogError($"Error occured while getting data from DB {e.Message}");
+                    return BadRequest();
+                }
+
+
+        }
+
 
         [HttpPost]
         public async Task<IActionResult> UploadCsvFile([FromForm] IFormFile file, [FromForm] string id1, [FromForm] string id2)
