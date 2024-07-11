@@ -21,7 +21,7 @@ namespace Listener.Mappers
                 Country = ValidateString(values[3],"Country"),
                 State = ValidateString(values[4],"State"),
                 City = ValidateString(values[5],"City"),
-                TelephoneNumber = ValidateString(values[6],"TelephoneNumber"),
+                TelephoneNumber = ValidateTelephone(values[6],"TelephoneNumber"),
                 AddressLine1 = ValidateString(values[7],"AddressLine1"),
                 AddressLine2 = values[8],
                 DateOfBirth = ValidateDateTime(values[9],"DateTime"),
@@ -43,6 +43,21 @@ namespace Listener.Mappers
                 return v1;
             }
             throw new Exception($"Error at parsing int {v1} of feild: {v2}");
+        }
+          public static string ValidateTelephone(string value, string fieldName)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                throw new Exception($"Field '{fieldName}' cannot be null or empty.");
+            }
+
+            var r = new Regex(@"^\(?([0-9]{3})\)?[- ]?([0-9]{3})[-.●]?([0-9]{4})$");
+            if (r.IsMatch(value))
+            {
+                return value;
+            }
+
+            throw new Exception($"Field '{fieldName}' has an invalid TelephoneNumber.");
         }
 
         private static string ValidateString(string v1, string v2)

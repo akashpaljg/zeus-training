@@ -25,6 +25,8 @@ using EFCore.BulkExtensions.SqlAdapters.MySql;
 using System.Data.Common;
 using System.Data;
 using Dapper;
+using System.Text.Json;
+using Csvhandling.Mappers;
 
 namespace Csvhandling.Controllers
 {
@@ -92,9 +94,96 @@ namespace Csvhandling.Controllers
         }
 
         [HttpGet]
+        [Route("delete/{id}")]
+        public async Task<IActionResult> DeleteId(int id){
+            try{
+            await _retryPolicy.ExecuteAsync(async ()=>{
+                    await _mySqlConnection.OpenAsync();
+                    _logger.LogInformation("Connection established");
+                    var transaction = await _mySqlConnection.BeginTransactionAsync();
+                   using (var command = new MySqlCommand("Delete from csvhandle.csvdata where Id=@id",_mySqlConnection,transaction)){
+                    command.CommandType = System.Data.CommandType.Text;
+                    command.Parameters.Add(new MySqlParameter("@id",id));
+                    try{
+                        await command.ExecuteNonQueryAsync();
+                        await transaction.CommitAsync();
+                        _logger.LogInformation("Deleted Successfully");
+                    }catch(Exception e){
+                        await transaction.RollbackAsync();
+                        _logger.LogError($"Error occured {e.Message}");
+                    }
+                   }
+                
+                    await _mySqlConnection.CloseAsync();
+                 });
+
+                 return Ok("Deleted Successfully");
+
+                }catch(Exception e){
+                    _logger.LogError($"Error occured while getting data from DB {e.Message}");
+                    return BadRequest();
+                }
+        }
+
+        [HttpPost]
+        [Route("update")]
+        public async Task<IActionResult> UpdateData([FromBody] CsvModel updatedModel){
+            try{
+                Console.WriteLine(updatedModel.Id);
+                CsvModel model = updatedModel.ValidateModel();
+                    
+                _logger.LogInformation("Got Data");
+
+                 var sCommand = new StringBuilder("REPLACE INTO csvdata (Id,EmailId,Name,Country,State,City,TelephoneNumber,AddressLine1,AddressLine2,DateOfBirth,FY2019_20,FY2020_21,FY2021_22,FY2022_23,FY2023_24) VALUES ");
+
+                var rows =
+                    string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
+                        model.Id,
+                        MySqlHelper.EscapeString(model.EmailId),
+                        MySqlHelper.EscapeString(model.Name),
+                        MySqlHelper.EscapeString(model.Country),
+                        MySqlHelper.EscapeString(model.State),
+                        MySqlHelper.EscapeString(model.City),
+                        MySqlHelper.EscapeString(model.TelephoneNumber),
+                        MySqlHelper.EscapeString(model.AddressLine1),
+                        MySqlHelper.EscapeString(model.AddressLine2),
+                        model.DateOfBirth.ToString("yyyy-MM-dd"),
+                        model.FY2019_20,
+                        model.FY2020_21,
+                        model.FY2021_22,
+                        model.FY2022_23,
+                        model.FY2023_24);
+                sCommand.Append(string.Join(",", rows));
+
+                await _retryPolicy.ExecuteAsync(async ()=>{
+                await _mySqlConnection.OpenAsync();
+                var transaction = await _mySqlConnection.BeginTransactionAsync();
+                using (var command = new MySqlCommand(sCommand.ToString(),_mySqlConnection,transaction)){
+                    command.CommandType = System.Data.CommandType.Text;
+                    try{
+                        await command.ExecuteNonQueryAsync();
+                        await transaction.CommitAsync();
+                        _logger.LogInformation("Updated Successfully");
+                    }catch(Exception e){
+                        _logger.LogError($"Error at updating {e.Message}");
+                        await transaction.RollbackAsync();
+                    }
+                }
+            });
+            return Ok();
+            }catch(Exception e){
+                Console.WriteLine($"Error is {e.Message}");
+                return BadRequest("Incorrect format of Data");
+            }
+        }
+
+        [HttpGet]
         [Route("data")]
         public async Task<IActionResult> GetData()
         {
+            IEnumerable<CsvModel> csvData = null ;
+
+            
             try{
                 Console.WriteLine("=====Data Get=====");
 
@@ -103,14 +192,13 @@ namespace Csvhandling.Controllers
                     await _mySqlConnection.OpenAsync();
                     
                     _logger.LogInformation("Connection established");
-                });
-                
 
-
-                    var csvData = await _mySqlConnection.QueryAsync<CsvModel>("select * from csvhandle.csvdata limit 10;");
-                    return Ok(new {data= csvData}); 
-                
-
+                    csvData = await _mySqlConnection.QueryAsync<CsvModel>("select * from csvhandle.csvdata limit 10;");
+                    await _mySqlConnection.CloseAsync();
+                    
+                    
+                 });
+                 return Ok(new {data = csvData});
                 }catch(Exception e){
                     _logger.LogError($"Error occured while getting data from DB {e.Message}");
                     return BadRequest();

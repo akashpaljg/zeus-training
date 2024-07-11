@@ -3,24 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using Listener.Models;
-using Listener.Mappers;
 using System.Text.Json;
 using System.Text;
-using MySql.Data.MySqlClient;
+using log4net;
 
 namespace Listener.Helper
 {
     public class RabbitProducer
     {
+        private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         ConnectionFactory factory { get; set; }
         IConnection connection { get; set; }
         IModel channel { get; set; }
 
         public RabbitProducer()
         {
-            Console.WriteLine("RabbitProducer Started...");
+            log.Info("RabbitProducer Started...");
             factory = new ConnectionFactory { HostName = "localhost" };
             try
             {
@@ -29,29 +28,27 @@ namespace Listener.Helper
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error establishing connection: {e.Message}");
+                log.Error($"Error establishing connection: {e.Message}");
             }
         }
 
-        public async Task Register(List<CsvModel> models,string uid,string fid,string bid)
+        public async Task Register(List<CsvModel> models, string uid, string fid, string bid)
         {
-            Console.WriteLine("I'm registering RabbitDbProducer");
+            log.Info("Registered RabbitDbProducer");
 
             channel.QueueDeclare(queue: "welloDb2", durable: false, exclusive: false, autoDelete: false, arguments: null);
-   
-            
+
             var jsonString = JsonSerializer.Serialize(models);
             var body = Encoding.UTF8.GetBytes($"{jsonString}|{uid}|{fid}|{bid}");
 
-            Console.WriteLine("Encoded data in queue: RabbitDbProducer");
-
+            log.Info($"Encoded data in queue");
 
             channel.BasicPublish(exchange: string.Empty,
                                  routingKey: "welloDb2",
                                  basicProperties: null,
                                  body: body);
 
-            Console.WriteLine(" [x] Sent Command");
+            log.Info(" [x] Sent Command");
 
             // Optionally, you can wait for an acknowledgment here using the correlationId and reply queue.
         }
@@ -60,6 +57,5 @@ namespace Listener.Helper
         {
             connection.Close();
         }
-
     }
 }

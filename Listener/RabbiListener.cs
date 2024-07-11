@@ -1,4 +1,9 @@
-﻿using System.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MySql.Data.MySqlClient;
 using Polly;
@@ -13,33 +18,28 @@ using Listener.Service;
 using System.Data;
 
 
+
 public class RabbitListener
 {
-    private static readonly AsyncRetryPolicy _retryPolicy;
-    private static ILogger<RabbitListener> _logger;
+      private static readonly log4net.ILog log = log4net.LogManager.GetLogger
+    (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static StatusService _statusService;
+    private static readonly AsyncRetryPolicy _retryPolicy;
+      private static StatusService _statusService;
+
     static RabbitListener()
     {
-        var _loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder
-                .AddConsole()
-                .AddDebug()
-                .SetMinimumLevel(LogLevel.Debug);
-        });
-
-        _logger = _loggerFactory.CreateLogger<RabbitListener>();
-
+        
         var delay = Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), retryCount: 5);
         _retryPolicy = Policy
             .Handle<Exception>()
             .WaitAndRetryAsync(delay, (exception, timeSpan, retryCount, context) =>
             {
-                _logger.LogError($"Retry {retryCount} encountered an error: {exception.Message}. Waiting {timeSpan} before next retry.");
+                log.Error($"Retry {retryCount} encountered an error: {exception.Message}. Waiting {timeSpan} before next retry.");
             });
 
         _statusService = new StatusService();
+       
     }
 
     public static async Task Main(string[] args)
@@ -55,49 +55,50 @@ public class RabbitListener
             await Task.CompletedTask;
         });
 
-        Console.WriteLine("Started...");
+        log.Info("Started Listening");
 
-        await _retryPolicy.ExecuteAsync(async ()=>{
-
-        channel.QueueDeclare(queue: "wello2", durable: false, exclusive: false, autoDelete: false, arguments: null);
-
-        var consumer = new EventingBasicConsumer(channel);
-        channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-
-        consumer.Received += async (model, ea) =>
+        await _retryPolicy.ExecuteAsync(async () =>
         {
-            var body = ea.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
+            channel.QueueDeclare(queue: "wello2", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
-            Console.WriteLine($"Message received: {message}");
+            var consumer = new EventingBasicConsumer(channel);
+            channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
 
-            try
+            consumer.Received += async (model, ea) =>
             {
-                var msgParts = message.Split("|");
-                string filePath = msgParts[0];
-                string uid = msgParts[1];
-                string fid = msgParts[2];
-                await _statusService.UpdateStatus(uid,fid,"Processing");
-                await ProcessStreamMessage(filePath, uid, fid);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Error processing message: {e.Message}");
-            }
+                var body = ea.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
 
-            // Acknowledge the message
-            channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
-        };
-        
+                log.Info($"Message received: {message}");
 
-        channel.BasicConsume(queue: "wello2", autoAck: false, consumer: consumer);
-  });
+                try
+                {
+                    var msgParts = message.Split("|");
+                    string filePath = msgParts[0];
+                    string uid = msgParts[1];
+                    string fid = msgParts[2];
+                    await _statusService.UpdateStatus(uid, fid, "Processing");
+                    await ProcessStreamMessage(filePath, uid, fid);
+                }
+                catch (Exception e)
+                {
+                    log.Error($"Error processing message: {e.Message}");
+                }
+
+                // Acknowledge the message
+                channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+            };
+
+            channel.BasicConsume(queue: "wello2", autoAck: false, consumer: consumer);
+        });
+
         Console.WriteLine("Press [Enter] to exit");
         Console.ReadLine();
     }
 
-    private static async Task ProcessStreamMessage(string filePath, string uid,string fid)
+    private static async Task ProcessStreamMessage(string filePath, string uid, string fid)
     {
+        log.Info("Started Processing: ProcessStreamMessage Method");
         List<CsvModel> models = new List<CsvModel>();
 
         try
@@ -120,14 +121,14 @@ public class RabbitListener
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError($"Error parsing CSV data: {e.Message}");
+                        log.Error($"Error parsing CSV data: {e.Message}");
                     }
                 }
             }
         }
         catch (Exception e)
         {
-            _logger.LogError($"Error processing file: {e.Message}");
+            log.Error($"Error processing file: {e.Message}");
         }
         finally
         {
@@ -139,31 +140,27 @@ public class RabbitListener
                     {
                         File.Delete(filePath);
                         await Task.CompletedTask;
+                        log.Warn($"File Deleted from {filePath}");
                     });
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError($"Error deleting file: {e.Message}");
+                    log.Error($"Error deleting file: {e.Message}");
                 }
             }
         }
 
         int totalBatches = (int)Math.Ceiling(models.Count / 10000.0);
-        Console.WriteLine(totalBatches);
-        await _statusService.UpdateTotalBatches(uid,fid,totalBatches);
-         await _statusService.UpdateStatus(uid,fid,"Batching");
-        await BulkToMySQLAsync(models, uid,fid);
+        await _statusService.UpdateTotalBatches(uid, fid, totalBatches);
+        await _statusService.UpdateStatus(uid, fid, "Batching");
+        await BulkToMySQLAsync(models, uid, fid);
     }
 
-    private static int Mini(int a, int b){
-        if(a<b){
-            return a;
-        }
-        return b;
-    }
+    private static int Mini(int a, int b) => a < b ? a : b;
 
-    private static async Task BulkToMySQLAsync(List<CsvModel> models, string uid,string fid)
+    private static async Task BulkToMySQLAsync(List<CsvModel> models, string uid, string fid)
     {
+        log.Info("Started batching: Method BulkToMySQLAsync");
         var rows = models.Select(model =>
             string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
                 model.Id,
@@ -184,26 +181,24 @@ public class RabbitListener
 
         RabbitProducer _producer = new RabbitProducer();
         int batchSize = 10000;
-        await _statusService.UpdateStatus(uid,fid,"Uplaoding");
-       
+        await _statusService.UpdateStatus(uid, fid, "Uploading");
 
         for (int i = 0; i < rows.Count; i += batchSize)
         {
-             Batch newBatch = new Batch{
+            Batch newBatch = new Batch
+            {
                 BId = Guid.NewGuid().ToString(),
-                BatchStart = i+1,
-                BatchEnd = Mini(i+batchSize,rows.Count),
+                BatchStart = i + 1,
+                BatchEnd = Mini(i + batchSize, rows.Count),
                 BatchStatus = "Pending"
-             };
+            };
 
-             
-            Console.WriteLine($"Batch {i / batchSize + 1}");
+            log.Info($"Batch {i / batchSize + 1} Processed");
 
             await _retryPolicy.ExecuteAsync(async () =>
             {
-                
-                await _producer.Register(models.Skip(i).Take(batchSize).ToList(),uid,fid,newBatch.BId);
-                 await _statusService.AddBatch(uid,fid,newBatch);
+                await _producer.Register(models.Skip(i).Take(batchSize).ToList(), uid, fid, newBatch.BId);
+                await _statusService.AddBatch(uid, fid, newBatch);
             });
         }
     }

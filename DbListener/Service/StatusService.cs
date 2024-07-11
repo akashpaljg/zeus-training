@@ -5,13 +5,15 @@ using System.Threading.Tasks;
 using DbListener.Models;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using log4net;
 
 namespace DbListener.Service
 {
     public class StatusService
     {
+         private static readonly ILog _logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private readonly IMongoCollection<StatusModel> _statusCollection;
-        private readonly ILogger<StatusService> _logger;
+        // private readonly ILogger<StatusService> _logger;
 
         public StatusService()
         {
@@ -19,12 +21,12 @@ namespace DbListener.Service
             var mongoDatabase = mongoClient.GetDatabase("test");
             _statusCollection = mongoDatabase.GetCollection<StatusModel>("Status");
 
-            var _loggerFactory = LoggerFactory.Create(builder => builder
-                .AddConsole()
-                .AddDebug()
-                .SetMinimumLevel(LogLevel.Debug)
-            );
-            _logger = _loggerFactory.CreateLogger<StatusService>();
+            // var _loggerFactory = LoggerFactory.Create(builder => builder
+            //     .AddConsole()
+            //     .AddDebug()
+            //     .SetMinimumLevel(LogLevel.Debug)
+            // );
+            // _logger = _loggerFactory.CreateLogger<StatusService>();
         }
 
         public async Task<List<StatusModel>> GetAsync() =>
@@ -44,16 +46,16 @@ namespace DbListener.Service
 
                 if (result.MatchedCount > 0)
                 {
-                    _logger.LogInformation($"Successfully updated batch status for UId: {id}, FId: {fid}, BId: {bid}");
+                    _logger.Info($"Successfully updated batch status for UId: {id}, FId: {fid}, BId: {bid}");
                 }
                 else
                 {
-                    _logger.LogWarning($"No document found with UId: {id}, FId: {fid}, and BId: {bid}");
+                    _logger.Warn($"No document found with UId: {id}, FId: {fid}, and BId: {bid}");
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Error occurred while updating batch status: {e.Message}");
+                _logger.Error($"Error occurred while updating batch status: {e.Message}");
             }
         }
 
@@ -69,16 +71,16 @@ namespace DbListener.Service
 
                 if (result.MatchedCount > 0)
                 {
-                    _logger.LogInformation($"Successfully incremented BatchCount for id: {id} and fid: {fid}");
+                    _logger.Info($"Successfully incremented BatchCount for id: {id} and fid: {fid}");
                 }
                 else
                 {
-                    _logger.LogWarning($"No document found with id: {id} and fid: {fid}");
+                    _logger.Warn($"No document found with id: {id} and fid: {fid}");
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Error occurred while updating batch count: {e.Message}");
+                _logger.Error($"Error occurred while updating batch count: {e.Message}");
             }
         }
 
@@ -96,13 +98,13 @@ namespace DbListener.Service
 
                 if (document == null)
                 {
-                    _logger.LogWarning($"No document found with UId: {id} and FId: {fid}");
+                    _logger.Warn($"No document found with UId: {id} and FId: {fid}");
                     return;
                 }
 
                 if (document.Batches.Count != document.TotalBatches)
                 {
-                    _logger.LogWarning($"Batch count ({document.Batches.Count}) does not match TotalBatches ({document.TotalBatches}) for UId: {id} and FId: {fid}");
+                    _logger.Warn($"Batch count ({document.Batches.Count}) does not match TotalBatches ({document.TotalBatches}) for UId: {id} and FId: {fid}");
                     return;
                 }
 
@@ -131,17 +133,17 @@ namespace DbListener.Service
 
                     if (updateResult.MatchedCount > 0)
                     {
-                        _logger.LogInformation($"Successfully updated status for UId: {id} and FId: {fid}");
+                        _logger.Info($"Successfully updated status for UId: {id} and FId: {fid}");
                     }
                     else
                     {
-                        _logger.LogWarning($"Failed to update status for UId: {id} and FId: {fid}");
+                        _logger.Warn($"Failed to update status for UId: {id} and FId: {fid}");
                     }
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Error occurred while updating status: {e.Message}");
+                _logger.Error($"Error occurred while updating status: {e.Message}");
             }
         }
     }

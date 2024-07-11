@@ -96,3 +96,5 @@ C:\Users\akash.pal\Desktop\practice\DbListener\bin\Debug\net8.0\Snappier.dll
 C:\Users\akash.pal\Desktop\practice\DbListener\bin\Debug\net8.0\runtimes\linux\native\libmongocrypt.so
 C:\Users\akash.pal\Desktop\practice\DbListener\bin\Debug\net8.0\runtimes\osx\native\libmongocrypt.dylib
 C:\Users\akash.pal\Desktop\practice\DbListener\bin\Debug\net8.0\runtimes\win\native\mongocrypt.dll
+C:\Users\akash.pal\Desktop\practice\DbListener\bin\Debug\net8.0\log4net.dll
+C:\Users\akash.pal\Desktop\practice\DbListener\bin\Debug\net8.0\DbListener.dll.config

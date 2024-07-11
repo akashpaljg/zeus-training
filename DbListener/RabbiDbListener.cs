@@ -16,29 +16,31 @@ using DbListener.Service;
 
 public class RabbitDbListener
     {
+        private static readonly log4net.ILog _logger = log4net.LogManager.GetLogger
+    (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private static readonly AsyncRetryPolicy _retryPolicy;
-        private static readonly ILogger<RabbitDbListener> _logger;
+        // private static readonly ILogger<RabbitDbListener> _logger;
 
         private static StatusService _statusService;
 
         static RabbitDbListener()
         {
-            var loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder
-                    .AddConsole()
-                    .AddDebug()
-                    .SetMinimumLevel(LogLevel.Debug);
-            });
+            // var loggerFactory = LoggerFactory.Create(builder =>
+            // {
+            //     builder
+            //         .AddConsole()
+            //         .AddDebug()
+            //         .SetMinimumLevel(LogLevel.Debug);
+            // });
 
-            _logger = loggerFactory.CreateLogger<RabbitDbListener>();
+            // _logger = loggerFactory.CreateLogger<RabbitDbListener>();
 
             var delay = Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), retryCount: 5);
             _retryPolicy = Policy
                 .Handle<Exception>()
                 .WaitAndRetryAsync(delay, (exception, timeSpan, retryCount, context) =>
                 {
-                    _logger.LogError($"Retry {retryCount} encountered an error: {exception.Message}. Waiting {timeSpan} before next retry.");
+                    _logger.Error($"Retry {retryCount} encountered an error: {exception.Message}. Waiting {timeSpan} before next retry.");
                 });
                 _statusService = new StatusService();
         }
@@ -56,7 +58,7 @@ public class RabbitDbListener
                 // await Task.CompletedTask;
             });
 
-            Console.WriteLine("Db listener Started...");
+            _logger.Info("Db listener Started...");
             await _retryPolicy.ExecuteAsync(async ()=>{
                 channel.QueueDeclare(queue: "welloDb2", durable: false, exclusive: false, autoDelete: false, arguments: null);
 
@@ -81,13 +83,13 @@ public class RabbitDbListener
                         Stopwatch st = new Stopwatch();
                         st.Start();
                         await Process(lists,uid,fid,bid);
-                        Console.WriteLine($"Processing time: {st.Elapsed}");
+                        _logger.Info($"Processing time: {st.Elapsed}");
                         st.Stop();
                     }
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError($"Error processing message: {e.Message}");
+                    _logger.Error($"Error processing message: {e.Message}");
                 }
 
           
@@ -141,13 +143,13 @@ public class RabbitDbListener
                         {
                             await myCmd.ExecuteNonQueryAsync();
                             await transaction.CommitAsync();
-                            Console.WriteLine("Batch Inserted successfully.");
+                            _logger.Info("Batch Inserted successfully.");
                             await _statusService.UpdateBatchCount(uid,fid);
                             await _statusService.UpdateBatchStatus(uid,fid,bid,"Completed");
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine($"Error Inserting Batch: {e.Message}");
+                            _logger.Error($"Error Inserting Batch: {e.Message}");
                             await _statusService.UpdateBatchStatus(uid,fid,bid,"Error");
                             await transaction.RollbackAsync();
                         }
@@ -163,7 +165,7 @@ public class RabbitDbListener
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error with database connection: {e.Message}");
+                _logger.Error($"Error with database connection: {e.Message}");
             }
         }
     }

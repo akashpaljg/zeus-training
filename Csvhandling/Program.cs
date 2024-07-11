@@ -43,15 +43,16 @@ if (app.Environment.IsDevelopment())
 
 // Check if the first argument is "worker"
 
-    app.UseWebSockets();
-    app.UseHttpsRedirection();
-    app.UseAuthorization();
+
     app.UseCors(builder => builder
         .AllowAnyOrigin()
         .AllowAnyMethod()
         .AllowAnyHeader());
+        
 
-    app.MapControllers();
+    app.MapControllers();    
+    app.UseHttpsRedirection();
+    app.UseAuthorization();
 
     app.Run();
 

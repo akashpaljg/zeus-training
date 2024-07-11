@@ -4,13 +4,15 @@ using System.Threading.Tasks;
 using Listener.Models;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using log4net;
 
 namespace Listener.Service
 {
     public class StatusService
     {
+         private static readonly ILog _logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private readonly IMongoCollection<StatusModel> _statusCollection;
-        private readonly ILogger<StatusService> _logger;
+        // private readonly ILogger<StatusService> _logger;
 
         public StatusService()
         {
@@ -18,11 +20,11 @@ namespace Listener.Service
             var mongoDatabase = mongoClient.GetDatabase("test");
             _statusCollection = mongoDatabase.GetCollection<StatusModel>("Status");
 
-            var _loggerFactory = LoggerFactory.Create(builder => builder
-                .AddConsole()
-                .AddDebug()
-                .SetMinimumLevel(LogLevel.Debug));
-            _logger = _loggerFactory.CreateLogger<StatusService>();
+            // var _loggerFactory = LoggerFactory.Create(builder => builder
+            //     .AddConsole()
+            //     .AddDebug()
+            //     .SetMinimumLevel(LogLevel.Debug));
+            // _logger = _loggerFactory.CreateLogger<StatusService>();
         }
 
         public async Task<List<StatusModel>> GetAsync() =>
@@ -40,16 +42,16 @@ namespace Listener.Service
 
                 if (result.MatchedCount > 0)
                 {
-                    _logger.LogInformation($"Successfully updated status for id: {id} and fid: {fid}");
+                    _logger.Info($"Successfully updated status for id: {id} and fid: {fid}");
                 }
                 else
                 {
-                    _logger.LogWarning($"No document found with id: {id} and fid: {fid}");
+                    _logger.Warn($"No document found with id: {id} and fid: {fid}");
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Error occurred while updating status: {e.Message}");
+                _logger.Error($"Error occurred while updating status: {e.Message}");
             }
         }
 
@@ -66,16 +68,16 @@ namespace Listener.Service
 
                 if (result.MatchedCount > 0)
                 {
-                    _logger.LogInformation($"Successfully updated TotalBatches for id: {id} and fid: {fid}");
+                    _logger.Info($"Successfully updated TotalBatches for id: {id} and fid: {fid}");
                 }
                 else
                 {
-                    _logger.LogWarning($"No document found with id: {id} and fid: {fid}");
+                    _logger.Warn($"No document found with id: {id} and fid: {fid}");
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Error occurred while updating total batches: {e.Message}");
+                _logger.Error($"Error occurred while updating total batches: {e.Message}");
             }
         }
 
@@ -91,16 +93,16 @@ namespace Listener.Service
 
                 if (result.MatchedCount > 0)
                 {
-                    _logger.LogInformation($"Successfully added batch for id: {id} and fid: {fid}");
+                    _logger.Info($"Successfully added batch for id: {id} and fid: {fid}");
                 }
                 else
                 {
-                    _logger.LogWarning($"No document found with id: {id} and fid: {fid}");
+                    _logger.Warn($"No document found with id: {id} and fid: {fid}");
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Error occurred while adding batch: {e.Message}");
+                _logger.Error($"Error occurred while adding batch: {e.Message}");
             }
         }
     }

@@ -11,8 +11,9 @@ namespace Csvhandling.Mappers
     {
         public static CsvModel ToCsvData(this string data)
         {
+            Console.WriteLine(data);
             var values = data.Split(',');
-
+            Console.WriteLine(values.Length);
             if(values.Length < 15){
                 throw new Exception("Not enough data is sent");
             }
@@ -25,7 +26,7 @@ namespace Csvhandling.Mappers
                 Country = ValidateString(values[3],"Country"),
                 State = ValidateString(values[4],"State"),
                 City = ValidateString(values[5],"City"),
-                TelephoneNumber = ValidateString(values[6],"TelephoneNumber"),
+                TelephoneNumber = ValidateTelephone(values[6],"TelephoneNumber"),
                 AddressLine1 = ValidateString(values[7],"AddressLine1"),
                 AddressLine2 = values[8],
                 DateOfBirth = ValidateDateTime(values[9],"DateTime"),
@@ -63,6 +64,21 @@ namespace Csvhandling.Mappers
                 return result;
             }
             throw new Exception($"Error at parsing int {v1} of feild: {v2}");
+        }
+          public static string ValidateTelephone(string value, string fieldName)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                throw new Exception($"Field '{fieldName}' cannot be null or empty.");
+            }
+
+            var r = new Regex(@"^\(?([0-9]{3})\)?[- ]?([0-9]{3})[-.●]?([0-9]{4})$");
+            if (r.IsMatch(value))
+            {
+                return value;
+            }
+
+            throw new Exception($"Field '{fieldName}' has an invalid TelephoneNumber.");
         }
 
         private static int ValidateInt(string v1, string v2)
