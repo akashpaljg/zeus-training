@@ -227,6 +227,22 @@
           }
         }
       },
+      "log4net/2.0.17": {
+        "type": "package",
+        "dependencies": {
+          "System.Configuration.ConfigurationManager": "4.5.0"
+        },
+        "compile": {
+          "lib/netstandard2.0/log4net.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/log4net.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "MedallionTopologicalSort/1.0.0": {
         "type": "package",
         "compile": {
@@ -4365,6 +4381,32 @@
         "lib/netstandard1.6/K4os.Hash.xxHash.xml",
         "lib/netstandard2.0/K4os.Hash.xxHash.dll",
         "lib/netstandard2.0/K4os.Hash.xxHash.xml"
+      ]
+    },
+    "log4net/2.0.17": {
+      "sha512": "qnnDf/ubJzwm2i1xH7nRMjEDoD+ctse7nZDqb+p7L1PvZc6ykpMoEesWr1/9hFqlsbII2v9e8yyQHJhoDQh7ZA==",
+      "type": "package",
+      "path": "log4net/2.0.17",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net20/log4net.dll",
+        "lib/net20/log4net.xml",
+        "lib/net35/log4net.dll",
+        "lib/net35/log4net.xml",
+        "lib/net40-client/log4net.dll",
+        "lib/net40-client/log4net.xml",
+        "lib/net40/log4net.dll",
+        "lib/net40/log4net.xml",
+        "lib/net45/log4net.dll",
+        "lib/net45/log4net.xml",
+        "lib/netstandard1.3/log4net.dll",
+        "lib/netstandard1.3/log4net.xml",
+        "lib/netstandard2.0/log4net.dll",
+        "lib/netstandard2.0/log4net.xml",
+        "log4net.2.0.17.nupkg.sha512",
+        "log4net.nuspec",
+        "package-icon.png"
       ]
     },
     "MedallionTopologicalSort/1.0.0": {
@@ -11743,7 +11785,8 @@
       "Pomelo.EntityFrameworkCore.MySql >= 8.0.2",
       "RabbitMQ.Client >= 6.8.1",
       "Swashbuckle.AspNetCore >= 6.4.0",
-      "Z.EntityFramework.Extensions.EFCore >= 8.103.0"
+      "Z.EntityFramework.Extensions.EFCore >= 8.103.0",
+      "log4net >= 2.0.17"
     ]
   },
   "packageFolders": {
@@ -11752,11 +11795,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
+      "projectUniqueName": "c:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
       "projectName": "Csvhandling",
-      "projectPath": "C:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
+      "projectPath": "c:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
       "packagesPath": "C:\\Users\\akash.pal\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\obj\\",
+      "outputPath": "c:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\akash.pal\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -11875,6 +11918,10 @@
           "Z.EntityFramework.Extensions.EFCore": {
             "target": "Package",
             "version": "[8.103.0, )"
+          },
+          "log4net": {
+            "target": "Package",
+            "version": "[2.0.17, )"
           }
         },
         "imports": [

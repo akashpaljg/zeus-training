@@ -130,6 +130,10 @@
             "Z.EntityFramework.Extensions.EFCore": {
               "target": "Package",
               "version": "[8.103.0, )"
+            },
+            "log4net": {
+              "target": "Package",
+              "version": "[2.0.17, )"
             }
           },
           "imports": [

@@ -35,7 +35,10 @@ namespace Csvhandling.Controllers
     public class CsvController : ControllerBase
     {
         private int BatchSize ;
-        private ILogger _logger;
+
+        private static readonly log4net.ILog _logger = log4net.LogManager.GetLogger
+    (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        // private ILogger _logger;
         private RabbitProducer rabbitProducer;
         private readonly AsyncRetryPolicy _retryPolicy;
 
@@ -45,13 +48,13 @@ namespace Csvhandling.Controllers
 
         public CsvController(StatusService _service)
         {
-            var _loggerFactory = LoggerFactory.Create(
-                builder => builder
-                    .AddConsole()
-                    .AddDebug()
-                    .SetMinimumLevel(LogLevel.Debug)
-            );
-            _logger = _loggerFactory.CreateLogger<Program>();
+            // var _loggerFactory = LoggerFactory.Create(
+            //     builder => builder
+            //         .AddConsole()
+            //         .AddDebug()
+            //         .SetMinimumLevel(LogLevel.Debug)
+            // );
+            // _logger = _loggerFactory.CreateLogger<Program>();
 
             rabbitProducer = new RabbitProducer("localhost");
          
@@ -63,7 +66,7 @@ namespace Csvhandling.Controllers
                 .WaitAndRetryAsync(delay, 
                     (exception, timeSpan, retryCount, context) => 
                     {
-                        _logger.LogError($"Retry {retryCount} encountered an error: {exception.Message}. Waiting {timeSpan} before next retry.");
+                        _logger.Error($"Retry {retryCount} encountered an error: {exception.Message}. Waiting {timeSpan} before next retry.");
                     }
                 );
                 _statusService = _service;
@@ -76,19 +79,19 @@ namespace Csvhandling.Controllers
         {
             try{
                 // var a = await _statusService.GetAsync();
-                Console.WriteLine("=====Status Get=====");
-                Console.WriteLine(id1);
-                Console.WriteLine(fid);
-                Console.WriteLine("=====Status Get=====");
+                _logger.Info("=====Status Get=====");
+                _logger.Info(id1);
+                _logger.Info(fid);
+                _logger.Info("=====Status Get=====");
 
                  var a = await _statusService.GetStatus(id1,fid);
                  var progress = await _statusService.GetBatchProgress(id1,fid);
-                 Console.WriteLine(a);
-                    _logger.LogInformation("Successfully Executed Comamnd");
+                    _logger.Info(a);
+                    _logger.Info("Successfully Executed Comamnd");
                   
                     return Ok(new {status=a,progress=progress});
             }catch(Exception e){
-                _logger.LogError($"Error in exceuting command {e.Message}");
+                _logger.Error($"Error in exceuting command {e.Message}");
                 return BadRequest("Error occured");
             }
         }
@@ -99,7 +102,7 @@ namespace Csvhandling.Controllers
             try{
             await _retryPolicy.ExecuteAsync(async ()=>{
                     await _mySqlConnection.OpenAsync();
-                    _logger.LogInformation("Connection established");
+                    _logger.Info("Connection established");
                     var transaction = await _mySqlConnection.BeginTransactionAsync();
                    using (var command = new MySqlCommand("Delete from csvhandle.csvdata where Id=@id",_mySqlConnection,transaction)){
                     command.CommandType = System.Data.CommandType.Text;
@@ -107,10 +110,10 @@ namespace Csvhandling.Controllers
                     try{
                         await command.ExecuteNonQueryAsync();
                         await transaction.CommitAsync();
-                        _logger.LogInformation("Deleted Successfully");
+                        _logger.Info("Deleted Successfully");
                     }catch(Exception e){
                         await transaction.RollbackAsync();
-                        _logger.LogError($"Error occured {e.Message}");
+                        _logger.Error($"Error occured {e.Message}");
                     }
                    }
                 
@@ -120,7 +123,7 @@ namespace Csvhandling.Controllers
                  return Ok("Deleted Successfully");
 
                 }catch(Exception e){
-                    _logger.LogError($"Error occured while getting data from DB {e.Message}");
+                    _logger.Error($"Error occured while getting data from DB {e.Message}");
                     return BadRequest();
                 }
         }
@@ -129,12 +132,12 @@ namespace Csvhandling.Controllers
         [Route("update")]
         public async Task<IActionResult> UpdateData([FromBody] CsvModel updatedModel){
             try{
-                Console.WriteLine(updatedModel.Id);
+               _logger.Info(updatedModel.Id);
                 CsvModel model = updatedModel.ValidateModel();
                     
-                _logger.LogInformation("Got Data");
+                _logger.Info("Got Data");
 
-                 var sCommand = new StringBuilder("REPLACE INTO csvdata (Id,EmailId,Name,Country,State,City,TelephoneNumber,AddressLine1,AddressLine2,DateOfBirth,FY2019_20,FY2020_21,FY2021_22,FY2022_23,FY2023_24) VALUES ");
+                var sCommand = new StringBuilder("REPLACE INTO csvdata (Id,EmailId,Name,Country,State,City,TelephoneNumber,AddressLine1,AddressLine2,DateOfBirth,FY2019_20,FY2020_21,FY2021_22,FY2022_23,FY2023_24) VALUES ");
 
                 var rows =
                     string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')",
@@ -163,17 +166,17 @@ namespace Csvhandling.Controllers
                     try{
                         await command.ExecuteNonQueryAsync();
                         await transaction.CommitAsync();
-                        _logger.LogInformation("Updated Successfully");
+                        _logger.Info("Updated Successfully");
                     }catch(Exception e){
-                        _logger.LogError($"Error at updating {e.Message}");
+                        _logger.Error($"Error at updating {e.Message}");
                         await transaction.RollbackAsync();
                     }
                 }
             });
             return Ok();
             }catch(Exception e){
-                Console.WriteLine($"Error is {e.Message}");
-                return BadRequest("Incorrect format of Data");
+                _logger.Error($"Error is {e.Message}");
+                return BadRequest(e.Message);
             }
         }
 
@@ -185,41 +188,131 @@ namespace Csvhandling.Controllers
 
             
             try{
-                Console.WriteLine("=====Data Get=====");
+                _logger.Info("=====Data Get=====");
 
                 await _retryPolicy.ExecuteAsync(async ()=>{
                     
                     await _mySqlConnection.OpenAsync();
                     
-                    _logger.LogInformation("Connection established");
+                    _logger.Info("Connection established");
 
-                    csvData = await _mySqlConnection.QueryAsync<CsvModel>("select * from csvhandle.csvdata limit 10;");
+                    csvData = await _mySqlConnection.QueryAsync<CsvModel>("select * from csvhandle.csvdata order by Id desc limit 10;");
                     await _mySqlConnection.CloseAsync();
                     
                     
                  });
                  return Ok(new {data = csvData});
                 }catch(Exception e){
-                    _logger.LogError($"Error occured while getting data from DB {e.Message}");
+                    _logger.Error($"Error occured while getting data from DB {e.Message}");
                     return BadRequest();
                 }
 
 
         }
 
+        [HttpPost]
+        [Route("add")]
+        public async Task<IActionResult> AddData([FromBody] CsvModel _data){
+            try{
+                CsvModel model = _data.ValidateModel();
+
+                bool res = await CheckDuplicate(_data.EmailId);
+
+                if(res){
+                    return BadRequest("Email Already Present");
+                }
+
+                _logger.Info("Got Data");
+
+                var sCommand = new StringBuilder("INSERT INTO csvdata (EmailId,Name,Country,State,City,TelephoneNumber,AddressLine1,AddressLine2,DateOfBirth,FY2019_20,FY2020_21,FY2021_22,FY2022_23,FY2023_24) VALUES ");
+
+                var rows =
+                    string.Format("('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}')",
+                   
+                        MySqlHelper.EscapeString(model.EmailId),
+                        MySqlHelper.EscapeString(model.Name),
+                        MySqlHelper.EscapeString(model.Country),
+                        MySqlHelper.EscapeString(model.State),
+                        MySqlHelper.EscapeString(model.City),
+                        MySqlHelper.EscapeString(model.TelephoneNumber),
+                        MySqlHelper.EscapeString(model.AddressLine1),
+                        MySqlHelper.EscapeString(model.AddressLine2),
+                        model.DateOfBirth.ToString("yyyy-MM-dd"),
+                        model.FY2019_20,
+                        model.FY2020_21,
+                        model.FY2021_22,
+                        model.FY2022_23,
+                        model.FY2023_24);
+                sCommand.Append(string.Join(",", rows));
+
+                await _retryPolicy.ExecuteAsync(async ()=>{
+                await _mySqlConnection.OpenAsync();
+                var transaction = await _mySqlConnection.BeginTransactionAsync();
+                using (var command = new MySqlCommand(sCommand.ToString(),_mySqlConnection,transaction)){
+                    command.CommandType = System.Data.CommandType.Text;
+                    try{
+                        await command.ExecuteNonQueryAsync();
+                        await transaction.CommitAsync();
+                        _logger.Info("Inserted Successfully");
+                    }catch(Exception e){
+                        _logger.Error($"Error at inserting {e.Message}");
+                        await transaction.RollbackAsync();
+                    }
+                }
+            });
+
+            return Ok();
+
+            }catch(Exception e){
+                _logger.Error($"Error is {e.Message}");
+                return BadRequest(e.Message);
+            }
+        }
+
+       public async Task<bool> CheckDuplicate(string EmailId)
+        {
+                return await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    try
+                    {
+                        await _mySqlConnection.OpenAsync();
+                        using (var command = new MySqlCommand("SELECT COUNT(*) FROM csvhandle.csvdata WHERE EmailId=@EmailId", _mySqlConnection))
+                        {
+                            command.CommandType = System.Data.CommandType.Text;
+                            command.Parameters.AddWithValue("@EmailId", EmailId);
+
+                            var result = await command.ExecuteScalarAsync(); // returns object therefore convert it into int
+                            int count = Convert.ToInt32(result);
+
+                            return count > 0;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Error($"Error at checking duplicate {e.Message}");
+                        throw;
+                    }
+                    finally
+                    {
+                        await _mySqlConnection.CloseAsync();
+                    }
+                });
+            }
+
+
 
         [HttpPost]
         public async Task<IActionResult> UploadCsvFile([FromForm] IFormFile file, [FromForm] string id1, [FromForm] string id2)
         {
-            _logger.LogWarning(id1.ToString());
+            _logger.Warn(id1.ToString());
             if (file == null || file.Length == 0)
             {
                 return BadRequest("No file uploaded.");
             }
-            Console.WriteLine("=======");
-            Console.WriteLine(id1);
-            Console.WriteLine(id2);
-            Console.WriteLine("=======");
+            _logger.Info("=======");
+            _logger.Info(id1);
+            _logger.Info(id2);
+            _logger.Info("=======");
             var filePath = Path.GetTempFileName();
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
@@ -231,13 +324,13 @@ namespace Csvhandling.Controllers
 
             try
             {
-                Console.WriteLine("registering");
-                Console.WriteLine(filePath);
+                _logger.Info("registering");
+               _logger.Info(filePath);
                 await _statusService.InsertStatus(id1,id2, "Waiting");
                 // int statusId = await _statusService.GetId(id);
-                Console.WriteLine("=======");
-                Console.WriteLine(1);
-                Console.WriteLine("=======");
+                _logger.Info("=======");
+               _logger.Info(1);
+                _logger.Info("=======");
 
                 // Apply the Polly retry policy to the RabbitMQ registration
                 await _retryPolicy.ExecuteAsync(async () =>
@@ -245,12 +338,12 @@ namespace Csvhandling.Controllers
                     await rabbitProducer.Register(filePath, id1,id2);
                 });
 
-                Console.WriteLine("Successfully");
+                _logger.Info("Successfully");
                 return Ok(new { file.ContentType, file.Length, file.FileName });
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.StackTrace);
+                _logger.Error($"Error during file upload",ex);
                 return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
             }
         }

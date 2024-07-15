@@ -69,10 +69,10 @@ namespace Csvhandling.Mappers
         {
             if (string.IsNullOrEmpty(value))
             {
-                throw new Exception($"Field '{fieldName}' cannot be null or empty.");
+                throw new Exception($"Field '{fieldName}' cannot be null or empty."); 
             }
 
-            var r = new Regex(@"^\(?([0-9]{3})\)?[- ]?([0-9]{3})[-.●]?([0-9]{4})$");
+            var r = new Regex(@"^\(?([0-9]{3})\)?[-.●]?([0-9]{3})[-.●]?([0-9]{4})$");
             if (r.IsMatch(value))
             {
                 return value;
@@ -86,14 +86,14 @@ namespace Csvhandling.Mappers
             if(int.TryParse(v1,out int result)){
                 return result;
             }
-            throw new Exception($"Error at parsing int {v1} of feild: {v2}");
+            throw new Exception($"Error at parsing int {v1} of field: {v2}");
         }
         private static long ValidateLong(string v1, string v2)
         {
             if(long.TryParse(v1,out long result)){
                 return result;
             }
-            throw new Exception($"Error at parsing long {v1} of feild: {v2}");
+            throw new Exception($"Field '{v2}' has letters.");
         }
     }
 }
