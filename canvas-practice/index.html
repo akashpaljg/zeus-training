@@ -3,24 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas Table</title>
+    <title>Canvas Table with Fixed Header and Row Numbers</title>
     <style>
         #canvasContainer {
-            overflow-x: auto;
-            overflow-y: auto;
-            white-space: nowrap;
-            max-height: 99vh; 
-            
+            position: relative;
+            width: 95vw;
+            height: 95vh;
+            overflow: auto;
         }
         canvas {
-            display: inline-block;
+            position: absolute;
+        }
+        #headerCanvas {
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+        #rowNumbersCanvas {
+            top: 30;
+            left: 0;
+            z-index: 1;
+        }
+        #dataCanvas {
+            z-index: 0;
         }
     </style>
 </head>
 <body>
     <div id="canvasContainer">
-        <canvas id="tableCanvas"></canvas>
+        <div id="firstElem" style="position: fixed; top: 10;left: 10;z-index: 3; overflow: auto; border: 2px solid gray;"></div>
+        <canvas id="headerCanvas"></canvas>
+        <canvas id="rowNumbersCanvas"></canvas>
+        <canvas id="dataCanvas"></canvas>
     </div>
-    <script src="canvas.js"></script>
+    <script src="canvas.js">
+    </script>
 </body>
 </html>
