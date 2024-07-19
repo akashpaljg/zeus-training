@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous"> -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <title>Canvas Table with Fixed Header and Row Numbers</title>
     <style>
         #canvasContainer {
             position: relative;
             width: 95vw;
-            height: 95vh;
+            height: 85vh;
             overflow: auto;
         }
         canvas {
@@ -27,9 +29,73 @@
         #dataCanvas {
             z-index: 0;
         }
+
+        /* Ribbon */
+        .ribbon{
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            margin: 1rem 0;
+        }
+        .uploadFile--form{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .uploadFile--form > button{
+            width: 5rem;
+            margin: 0.5rem 0;
+        }
+        .sort-find{
+            display: flex;
+            flex-direction: row;
+        }
     </style>
 </head>
 <body>
+    <div class="ribbon">
+        <!-- <div> -->
+            <form class="uploadFile--form" id="uploadFileForm" enctype="multipart/form-data" method="POST" >
+                <div>
+                    <label for="uploadFile">Upload file</label>
+                    <input type="file" name="file" id="uploadFile">
+                </div>
+                <button type="submit">Submit</button>
+                <div id="progressStatus"></div>
+                <div class="progress" style="background-color: lightgray; border-radius: 5px;">
+                    <div class="progress-bar" id="progressBar" style="background-color: green;"></div>
+                </div>
+            </form>
+        <!-- </div> -->
+         <div>
+            <form>
+                <input type="text" name="query" placeholder="Search By Email" autofocus>
+                <button type="submit">Search</button>
+            </form>
+         </div>
+         <div class="sort-find">
+            <div>
+                <label for="pet-select">Sort By:</label>
+
+                <select name="pets" id="pet-select">
+                <option value="">--Please choose an option--</option>
+                <option value="dog">Email</option>
+                </select>
+            </div>
+            <div>
+                </form>
+                    <label for="find--text">Find</label>
+                    <input type="text" name="find--text--name" id="find--text">
+                    <button type="submit">Find</button>
+                </form>
+                <form>
+                    <label for="find--text">Replace</label>
+                    <input type="text" name="replace--text--name" id="replace--text">
+                    <button type="submit">Replace</button>
+                </form>
+            </div>
+         </div>
+    </div>
     <div id="canvasContainer">
         <div id="firstElem" style="position: fixed; top: 10;left: 10;z-index: 3; overflow: auto; border: 2px solid gray;"></div>
         <canvas id="headerCanvas"></canvas>
@@ -38,5 +104,6 @@
     </div>
     <script src="canvas.js">
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
 </html>

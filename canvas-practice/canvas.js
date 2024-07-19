@@ -40,6 +40,7 @@ class TableCell {
 
         if (this.isHeader) {
             c.fillStyle =  color ? color : this.color;
+        
             c.fillRect(this.x, this.y, this.width, this.height);
         }
             c.fillStyle = this.isHeader ?'green' : color? color: 'black';
@@ -54,39 +55,59 @@ class TableCell {
 
         const lines = TableCell.getLines(c, this.text, this.width - 10);
         lines.forEach((line, index) => {
+            c.fillStyle = 'black';
             c.fillText(line, this.x + 5, this.y + 20 + (index * 15));
         });
     }
 }
 
 class CanvasTable {
-    constructor(containerId, headers, sampleData) {
+    constructor(containerId, headers,dataHeaders, sampleData) {
         this.container = document.getElementById(containerId);
+        this.submitFile = document.getElementById('uploadFileForm');
         this.headerCanvas = document.getElementById('headerCanvas');
+        this.dataHeaders = dataHeaders;
+    
+        this.uid = this.generateUUID();
         this.rowNumberCanvas = document.getElementById('rowNumbersCanvas');
         this.dataCanvas = document.getElementById('dataCanvas');
         this.firstEle = document.getElementById('firstElem');
+        this.progressBar = document.getElementById('progressBar');
+        this.progressStatus = document.getElementById('progressStatus');
         this.cHeader = this.headerCanvas.getContext("2d");
         this.cRow = this.rowNumberCanvas.getContext("2d");
         this.cData = this.dataCanvas.getContext("2d");
 
+        // handleSubmitting a file
+        this.submitFile.addEventListener("submit",this.handleSubmitFile.bind(this));
+
+        // data canvas handleClick
         this.dataCanvas.addEventListener("dblclick", this.handleDbClick.bind(this));
+
+        // data canvas multiselect
         this.dataCanvas.addEventListener("mousedown",this.handleDataDown.bind(this));
-        this.dataCanvas.addEventListener("mousemove",this.handleDataDown.bind(this));
-        // this.dataCanvas.addEventListener("mouseup",this.handleDataUp.bind(this));
+        this.dataCanvas.addEventListener("mousemove",this.handleDataMove.bind(this));
+        this.dataCanvas.addEventListener("mouseup",this.handleDataUp.bind(this));
+
+        // scroll
         this.container.addEventListener("scroll", this.handleScroll.bind(this));
       
         
-        // drag and drop
+        // header resize
         // this.headerCanvas.addEventListener("click",this.handleHeaderClick.bind(this));
         this.headerCanvas.addEventListener("mousedown", this.handleMouseDown.bind(this));
         this.headerCanvas.addEventListener("mousemove", this.handleMouseMove.bind(this));
         this.headerCanvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
 
+        // row resize
+        this.rowNumberCanvas.addEventListener("mousedown",this.handleRowMouseDown.bind(this));
+        this.rowNumberCanvas.addEventListener("mousemove",this.handleRowMouseMove.bind(this));
+        this.rowNumberCanvas.addEventListener("mouseup",this.handleRowMouseUp.bind(this));
+
+        // drag and drop
         this.headerCanvas.addEventListener("mousedown", this.handleDragStart.bind(this));
         document.addEventListener("mousemove", this.handleDragMove.bind(this));
         document.addEventListener("mouseup", this.handleDragEnd.bind(this));
-
         
 
         this.cellHeight = 30;
@@ -100,6 +121,20 @@ class CanvasTable {
             maxWidth: header.maxWidth || 500
         }));
 
+        this.sampleData = sampleData.map(sampleD => ({
+            ...sampleD,
+            height: sampleD.height || 30,
+            minHeight: sampleD.minHeight || 10,
+            maxHeight: sampleD.maxHeight || 60
+        }));
+
+        this.multiSelectState = {
+            isSelecting: false,
+            data: new Set(),
+            startCell: null,
+            endCell: null
+        };
+
         this.dragState = {
             isDragging: false,
             columnIndex: -1,
@@ -107,8 +142,9 @@ class CanvasTable {
             currentX: 0
         };
 
-        this.sampleData = sampleData;
+        
         this.resizeState = { isResizing: false, columnIndex: -1, startX: 0 };
+        this.rowResizeState = {isResizing:false,rowIndex:-1,startY:0}
 
         this.firstEle.style.width = `6.2rem`;
         this.firstEle.style.height = `1.8rem`;
@@ -118,24 +154,177 @@ class CanvasTable {
         this.drawTable();
     }
 
-    handleDataDown(event){
+    generateUUID() { // Public Domain/MIT
+        var d = new Date().getTime();//Timestamp
+        var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16;//random number between 0 and 16
+            if(d > 0){//Use timestamp until depleted
+                r = (d + r)%16 | 0;
+                d = Math.floor(d/16);
+            } else {//Use microseconds since page-load if supported
+                r = (d2 + r)%16 | 0;
+                d2 = Math.floor(d2/16);
+            }
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+    }
+
+    Polling(fid,event) {
+        const formData = new FormData();
+        formData.append("uid", this.uid);
+        formData.append("fid", fid);
+
+        const id = setInterval(async () => {
+            try {
+                const response = await fetch(`http://localhost:5103/api/check/status/${this.uid}/${fid}`);
+                const status = await response.json();
+                console.log(status.status);
+                console.log(status.progress);
+                this.progressBar.style.color = 'white';
+                if(status.progress < 0){
+                    this.progressBar.style.width = `0%`;
+                    this.progressBar.textContent = `0%`;
+                }else{
+                    this.progressBar.style.width = `${status.progress}%`;
+                    this.progressBar.textContent = `${status.progress}%`;
+                }
+
+                this.progressStatus.textContent = `${status.status}`;
+                
+               
+
+            
+
+                if (status.status === "Completed") {
+                    // setTimeout(async () => {
+                    //     this.clearI();
+                    // }, 1000);
+                    clearInterval(id);
+                }
+            } catch (error) {
+                console.error("Error while polling:", error);
+            }
+        }, 300);
+
+        // clearI(){
+        //     clearInterval(id);
+        // }
+    }
+    
+    
+    async handleSubmitFile(event){
+       
+        event.preventDefault();
+        if(!event.target[0].files.length > 0){
+            alert("Please uplaod file");
+            return;
+        }
+        console.log(event.target[0].files[0].name);
+        const fid = this.generateUUID();
+        const file = event.target[0].files[0];
+        console.log(`${file} ${this.uid} ${fid}`);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("id1", this.uid);
+        formData.append("id2",fid);
+
+        console.log("FormData entries:");
+        for (let entry of formData.entries()) {
+            console.log(entry[0], entry[1]);
+        }
+
+        // console.log(formData);
+        
+        try{
+            console.log("Sending");
+            await axios.post(`http://localhost:5103/api/check`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+        console.log("Sent");
+        //  Apply Polling
+        this.Polling(fid,event);
+    }catch(error){
+        console.error(error);
+    }
+        
+        // console.log(formData);
+    }
+
+   
+    handleDataDown(event) {
         const rect = this.dataCanvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
-        // console.log(x, y);
         const colIndex = this.getPositionX(x);
-        const rowIndex = Math.floor((y-this.headerHeight) / this.cellHeight);
+        const rowIndex = this.getPositionY(y);
+                                         
+        this.multiSelectState.data.clear();
 
         if (rowIndex >= 0 && rowIndex < this.sampleData.length && colIndex > 0 && colIndex < this.headers.length) {
-            const xcord = this.getCumulativeWidth - this.headers[colIndex].width;
-            const ycord = rowIndex * this.cellHeight + this.headerHeight ;
-    
-            const cellValue = this.sampleData[rowIndex][this.headers[colIndex].data];
-            this.drawData(xcord, ycord, this.headers[colIndex].data, rowIndex + 1, this.headers[colIndex].width,colIndex-1);
+            this.multiSelectState.isSelecting = true;
+            this.multiSelectState.startCell = { row: rowIndex, col: colIndex };
+            this.multiSelectState.endCell = { row: rowIndex, col: colIndex };
+            const cellKey = `${rowIndex}|${colIndex}`;
+
+            // this.multiSelectState.isAddingToSelection = !this.multiSelectState.data.has(cellKey);
+
+            this.updateSelection();
+            this.drawData();
         }
+    }
 
+    
+    handleDataMove(event) {
+        if (this.multiSelectState.isSelecting) {
+            const rect = this.dataCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const colIndex = this.getPositionX(x);
+            const rowIndex = this.getPositionY(y);
 
-        console.log(`colIndex: ${colIndex} rowIndex: ${rowIndex}`)
+            if (rowIndex >= 0 && rowIndex < this.sampleData.length && colIndex > 0 && colIndex < this.headers.length) {
+                // this.multiSelectState
+                this.multiSelectState.endCell = { row: rowIndex, col: colIndex };
+                const cellkey = `${rowIndex}|${colIndex}`;
+                this.updateSelection();
+                this.drawData();
+            }
+        }
+    }
+
+    handleDataUp() {
+        this.multiSelectState.isSelecting = false;
+    }
+
+    toggleCellSelection(row, col) {
+        const key = `${row}|${col}`;
+        if (this.multiSelectState.data.has(key)) {
+            this.multiSelectState.data.delete(key);
+        } else {
+            this.multiSelectState.data.add(key);
+        }
+    }
+
+     updateSelection() {
+        this.multiSelectState.data.clear();
+        const { startCell, endCell, isAddingToSelection } = this.multiSelectState;
+        const minRow = Math.min(startCell.row, endCell.row);
+        const maxRow = Math.max(startCell.row, endCell.row);
+        const minCol = Math.min(startCell.col, endCell.col);
+        const maxCol = Math.max(startCell.col, endCell.col);
+
+        for (let row = minRow; row <= maxRow; row++) {
+            for (let col = minCol; col <= maxCol; col++) {
+                const cellKey = `${row}|${col}`;
+                if(!this.multiSelectState.data.has(cellKey)){
+                    this.multiSelectState.data.add(cellKey);
+                }
+                
+            }
+        }
     }
 
     getPositionX(x){
@@ -143,6 +332,17 @@ class CanvasTable {
         for(let i=1;i<this.headers.length;i++){
             cumulativeWidth += this.headers[i].width;
             if(x < cumulativeWidth){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    getPositionY(y){
+        let cumulativeHeight = this.sampleData[0].height;
+        for(let i=1;i<this.sampleData.length;i++){
+            cumulativeHeight += this.sampleData[i].height;
+            if(y < cumulativeHeight){
                 return i;
             }
         }
@@ -191,6 +391,7 @@ class CanvasTable {
             this.dragState.isDragging = false;
             this.headerCanvas.style.cursor = "default";
             this.drawTable();
+            // this.drawData();
         }
     }
 
@@ -201,7 +402,7 @@ class CanvasTable {
         draggedColumn.height = this.headerCanvas.height + this.dataCanvas.height;
         draggedColumn.style.position = 'absolute';
         draggedColumn.style.top='0';
-        // draggedColumn.style.left=`${this.headers[0].width}`
+        draggedColumn.style.left=`${this.headers[0].width}`
         draggedColumn.style.zIndex = '4';
         draggedColumn.style.pointerEvents = 'none';
         draggedColumn.style.opacity = '0.5';
@@ -253,25 +454,33 @@ class CanvasTable {
     }
 
     swapColumns(fromIndex, toIndex) {
-        // Swap headers
-        const tempHeader = this.headers[fromIndex];
-     
-        this.headers.splice(fromIndex, 1);
-        this.headers.splice(toIndex, 0, tempHeader);
+        // alert(`${fromIndex} ${toIndex}`)
+         // Swap headers
+    const tempHeader = this.headers[fromIndex];
+    this.headers.splice(fromIndex, 1);
+    this.headers.splice(toIndex, 0, tempHeader);
 
-        // Swap data
-        this.sampleData = this.sampleData.map(row => {
-            // console.log(row);
-            const entries = Object.entries(row);
-            const temp = entries[fromIndex];
-            entries.splice(fromIndex, 1);
-            entries.splice(toIndex, 0, temp);
-            return Object.fromEntries(entries);
-        });
+    // Swap dataHeaders
+    const tempDataHeader = this.dataHeaders[fromIndex - 1]; // -1 because dataHeaders doesn't include the '#' column
+    this.dataHeaders.splice(fromIndex - 1, 1);
+    this.dataHeaders.splice(toIndex - 1, 0, tempDataHeader);
+
+    // Swap data
+    this.sampleData = this.sampleData.map(row => {
+        const entries = Object.entries(row);
+        const temp = entries[fromIndex];
+        entries.splice(fromIndex, 1);
+        entries.splice(toIndex, 0, temp);
+        return Object.fromEntries(entries);
+    });
     }
 
     getCumulativeWidth(index) {
         return this.headers.slice(0, index).reduce((sum, header) => sum + header.width, 0);
+    }
+
+    getCumulativeHeight(index){
+        return this.sampleData.slice(0, index).reduce((sum, header) => sum + header.height, 0);
     }
 
     updateCanvasSizes() {
@@ -290,8 +499,6 @@ class CanvasTable {
         this.drawData();
     }
 
-    
-
     handleMouseDown(event) {
         const rect = this.headerCanvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
@@ -302,7 +509,20 @@ class CanvasTable {
                 columnIndex: columnIndex,
                 startX: event.clientX
             };
-            // this.dragState.isDragging = false;
+        }
+    }
+
+    handleRowMouseDown(event){
+        const rect = this.rowNumberCanvas.getBoundingClientRect();
+        const y = event.clientY - rect.top;
+        const rowIndex = this.getColumnIndexAtY(y);
+        console.log(`RowIndex: ${rowIndex}`);
+        if (rowIndex !== -1) {
+            this.rowResizeState = {
+                isResizing: true,
+                rowIndex: rowIndex-1,
+                startY: event.clientY
+            };
         }
     }
 
@@ -326,9 +546,41 @@ class CanvasTable {
         }
     }
 
+    handleRowMouseMove(event){
+        if (this.rowResizeState.isResizing) {
+            const diff = event.clientY - this.rowResizeState.startY;
+            console.log(`Row diff: ${diff}`);
+            // console.log(header);
+            const header = this.sampleData[this.rowResizeState.rowIndex];
+            console.log(`Header ${header}`);
+            console.log(header);
+            const newHeight = Math.max(
+                header.minHeight,
+                Math.min(header.maxHeight, header.height + diff)
+            );
+
+            console.log(`New Height: ${newHeight}`);
+            header.height = newHeight;
+            this.rowResizeState.startY = event.clientY;
+            this.updateCanvasSizes();
+            this.drawTable();
+        } else {
+            const rect = this.rowNumberCanvas.getBoundingClientRect();
+            const y = event.clientY - rect.top;
+            const rowIndex = this.getColumnIndexAtY(y);
+            this.rowNumberCanvas.style.cursor = rowIndex !== -1 ? 'row-resize' : 'default';
+        }
+    }
+
+
     handleMouseUp() {
         this.resizeState.isResizing = false;
     }
+
+    handleRowMouseUp(){
+        this.rowResizeState.isResizing = false;
+    }
+
 
     getColumnIndexAtX(x) {
         let currentX = 0;
@@ -341,7 +593,16 @@ class CanvasTable {
         return -1;
     }
 
-  
+    getColumnIndexAtY(y){
+        let currentY = 0;
+        for (let i = 0; i < this.sampleData.length; i++) {
+            currentY += this.sampleData[i].height;
+            if (Math.abs(currentY - y) <= this.resizeThreshold) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     calculateCumulativeWidths(){
             let sum = 0;
@@ -361,58 +622,68 @@ class CanvasTable {
         });
     }
 
-
     drawRowCanvas() {
         this.cRow.clearRect(0, 0, this.rowNumberCanvas.width, this.rowNumberCanvas.height);
+        let currentY = this.headerHeight;
         this.sampleData.forEach((data, rowIndex) => {
-            new TableCell(0, this.headerHeight + rowIndex * this.cellHeight, this.headers[0].width, this.cellHeight, rowIndex + 1, true).draw(this.cRow);
+            const newHeight = data.height ? data.height:30;
+            new TableCell(0, currentY, this.headers[0].width,newHeight , rowIndex + 1, true).draw(this.cRow);
+            currentY += newHeight;
         });
     }
+    
 
-    drawData(xcord = null, ycord = null, i = null, j = null,inputWidth = null,columnIndex=null) {
+    drawData(xcord = null, ycord = null, i = null, j = null, inputWidth = null, columnIndex = null) {
+        // alert("Draw Data")
         let x = 0;
         this.cData.clearRect(0, 0, this.dataCanvas.width, this.dataCanvas.height);
+
         
-        this.sampleData.forEach((rowData, rowIndex) => {
-            x = this.headers[0].width;
-            this.headers.forEach((header, colIndex) => {
-                if (colIndex > 0) {  // Skip the first column (row numbers)
-                    new TableCell(x, this.headerHeight + rowIndex * this.cellHeight, header.width, this.cellHeight, "").draw(this.cData);
-                    x += header.width;
-                }
-                if(j !== null && colIndex === columnIndex && (j-1) === rowIndex){
-                    new TableCell(x, this.headerHeight + rowIndex * this.cellHeight, header.width, this.cellHeight, "").draw(this.cData,"lightblue");
-                    x += header.width;
-                }
-            });
-        });
-
-
+    
+       // Draw data
+       let currentY = this.headerHeight;
+       this.sampleData.forEach((rowData, rowIndex) => {
+           x = 0; // Start from the beginning for data
+           const newHeight = rowData.height || 30;
+   
+           this.headers.forEach((header, colIndex) => {
+            //    if (colIndex > 0) {  // Skip the first column (row numbers)
+                   const dataHeaderIndex = colIndex - 1; // Adjust for the offset
+                   const dataKey = this.dataHeaders[dataHeaderIndex];
+                   const cellValue = rowData[dataKey] || "";
+                //    console.log(`Cell Value: ${cellValue}`)
+                   
+                   const color = this.multiSelectState.data.has(`${rowIndex+1}|${colIndex}`) ? "rgba(3, 194, 252,0.5)" : null;
+                   
+                   new TableCell(x, currentY, header.width, newHeight, cellValue).draw(this.cData, color);
+                   x += header.width;
+            //    }
+           });
+           currentY += newHeight;
+       });
+    
         if (xcord !== null && ycord !== null && i !== null && j !== null && inputWidth !== null) {
             const existingInput = document.querySelector('#canvasContainer input');
             if (existingInput) {
                 existingInput.remove();
             }
-
-            // console.log("Cell Height", this.cellHeight);
-            // console.log("Cell Width", this.headers[j].width);
-
+    
             const input = document.createElement("input");
             input.placeholder = `${i}${j}`;
             input.autofocus = true;
             input.style.top = `${ycord}px`
             input.style.left = `${xcord}px`
             input.style.position = "absolute";
-            input.style.width = `${inputWidth-7}px`;
-            input.style.height = `${this.cellHeight-5}px`;
+            input.style.width = `${inputWidth - 7}px`;
+            input.style.height = `${this.sampleData[i].height - 5}px`; // Use dynamic row height here
             input.style.border = "2px solid blue"; // Set border color to blue
             input.style.borderRadius = "3px";
             input.style.fontSize = "14px";
-            
-
+    
             document.getElementById('canvasContainer').appendChild(input);
         }
     }
+    
 
     handleScroll() {
         const scrollLeft = this.container.scrollLeft;
@@ -576,10 +847,13 @@ class CanvasTable {
             this.drawData(xcord, ycord, this.headers[colIndex].data, rowIndex + 1, this.headers[colIndex].width);
         }
     }
-    
+
+   
+
 }
 
-window.onload = function () {
+
+window.onload = async function () {
     const headers = [
         {data:"#"},
         {data:"A"},
@@ -609,16 +883,73 @@ window.onload = function () {
         {data:"Y"},
         {data:"Z"}
       ];
-      
 
-    let sampleData = [];
-    for (let i = 0; i < 200; i++) {
-        let row = {};
-        headers.forEach((header, index) => {
-            row[header.data] = "";
-        });
-        sampleData.push(row);
+    async function getData(){
+        const res = await fetch(`http://localhost:5103/api/check/data`);
+            const response = await res.json();
+            // console.log(response.data);
+            return response.data;
     }
 
-    new CanvasTable('canvasContainer', headers, sampleData);
+    
+    const dataHeaders = [
+        "id",
+          "emailId",
+        "name",
+          "country",
+            "state",
+        "city",
+          "telephoneNumber",
+         "addressLine1",
+         "addressLine2",
+          "dateOfBirth",
+            "fY2019_20",
+            "fY2020_21",
+            "fY2021_22",
+            "fY2022_23",
+        "fY2023_24",
+    ];
+    
+    
+    let sampleData = [];
+    // sampleData.push(dataHeaders);
+    // console.log(sampleData)
+   
+
+    const data = await getData();
+    // console.log(dataHeaders);
+    // console.log(data);
+    if(data.length > 0){
+        sampleData = [{
+            id:"Id",
+            emailId:"EmailId",
+            name:"Name",
+            country:"Country",
+            state:"State",
+            city:"City",
+            telephoneNumber:"TelephoneNumber",
+            addressLine1:"AddressLine1",
+            addressLine2:"AddressLine2",
+            dateOfBirth:"dateOfBirth",
+            fY2019_20:"FY2019_20",
+            fY2020_21:"FY2020_21",
+            fY2021_22:"FY2021_22",
+            fY2022_23:"FY2022_23",
+            fY2023_24:"FY2023_24",
+        },...data];
+    }else{
+        for (let i = 0; i < 30; i++) {
+            let row = {};
+            headers.forEach((header, index) => {
+                row[header.data] = "";
+            });
+            sampleData.push(row);
+        }
+    }
+
+    
+    console.log(sampleData);
+    new CanvasTable('canvasContainer', headers,dataHeaders,sampleData)
+   
+
 }
