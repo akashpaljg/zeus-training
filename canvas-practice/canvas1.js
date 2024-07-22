@@ -68,10 +68,6 @@ class CanvasTable {
         this.headerCanvas = document.getElementById('headerCanvas');
         this.dataHeaders = dataHeaders;
 
-        this.visibleRowBuffer = 20;
-        this.debounceTimer = null;
-        this.isLoadingData = false;
-        
         // Batches
         this.batchStart = 0;
         
@@ -533,20 +529,20 @@ class CanvasTable {
         return this.sampleData.slice(0, index).reduce((sum, header) => sum + header.height, 0);
     }
 
-    // updateCanvasSizes() {
-    //     const totalWidth = this.headers.reduce((sum, header) => sum + header.width, 0);
-    //     this.headerCanvas.width = this.headers[0].width+ totalWidth;
-    //     this.headerCanvas.height = this.headerHeight;
-    //     this.rowNumberCanvas.width = this.headers[0].width;
-    //     this.rowNumberCanvas.height = this.headerHeight + this.cellHeight * this.sampleData.length;
-    //     this.dataCanvas.width =  totalWidth;
-    //     this.dataCanvas.height = this.headerHeight+ this.cellHeight * this.sampleData.length;
-    // }
+    updateCanvasSizes() {
+        const totalWidth = this.headers.reduce((sum, header) => sum + header.width, 0);
+        this.headerCanvas.width = this.headers[0].width+ totalWidth;
+        this.headerCanvas.height = this.headerHeight;
+        this.rowNumberCanvas.width = this.headers[0].width;
+        this.rowNumberCanvas.height = this.headerHeight + this.cellHeight * this.sampleData.length;
+        this.dataCanvas.width =  totalWidth;
+        this.dataCanvas.height = this.headerHeight+ this.cellHeight * this.sampleData.length;
+    }
 
     drawTable() {
         this.drawHeader();
         this.drawRowCanvas();
-        this.updateVisibleArea(this.container.scrollLeft, this.container.scrollTop);
+        this.drawData();
     }
 
     handleMouseDown(event) {
@@ -776,18 +772,20 @@ class CanvasTable {
         this.headerCanvas.style.top = `${scrollTop}px`;
         this.rowNumberCanvas.style.left = `${scrollLeft}px`;
 
-        // Debounce the scroll event
-        clearTimeout(this.debounceTimer);
-        this.debounceTimer = setTimeout(() => {
-            this.updateVisibleArea(scrollLeft, scrollTop);
-        }, 100); // Adjust this value as needed
+        if (Math.abs(scrollTop - this.lastScrollTop) > this.headerHeight - 30 ||
+            Math.abs(scrollLeft - this.lastScrollLeft) > this.headers[0].width - 100) {
 
+            this.lastScrollTop = scrollTop;
+            this.lastScrollLeft = scrollLeft;
+
+            this.updateVisibleArea(scrollLeft, scrollTop);
+        }
     }
     getVisibleArea(scrollX, scrollY) {
-        const startRow = Math.floor(scrollTop / this.cellHeight);
-        const endRow = Math.ceil((scrollTop + this.container.clientHeight) / this.cellHeight);
-        const startCol = Math.floor(scrollLeft / this.headers[0].width);
-        const endCol = Math.ceil((scrollLeft + this.container.clientWidth) / this.headers[0].width);
+        const startRow = Math.floor(scrollY / this.headerHeight);
+        const endRow = Math.min(Math.ceil((scrollY + this.container.clientHeight+30) / this.headerHeight), this.sampleData.length);
+        const startCol = Math.floor(scrollX / this.headers[0].width);
+        const endCol = Math.min(Math.ceil((scrollX + this.container.clientWidth+100) / this.headers[0].width), this.headers.length);
 
         return { startRow, endRow, startCol, endCol };
     }
@@ -801,61 +799,36 @@ class CanvasTable {
     }
 
     async updateVisibleArea(scrollLeft, scrollTop) {
-        const visibleArea = this.getVisibleArea(scrollLeft, scrollTop);
-        
-        // Check if we need to load more data
-        if (!this.isLoadingData && visibleArea.endRow + this.visibleRowsBuffer > this.sampleData.length) {
-            this.isLoadingData = true;
+        // alert("Update Visible called")
+        console.log(this.getVisibleArea(scrollLeft,scrollTop));
+        // const startRow = this.getRowIndexAtY(scrollTop);
+        // const startCol = this.getColIndexAtX(scrollLeft);
+
+        // const visibleRowCount = this.getVisibleRowCount(scrollTop);
+        // const visibleColCount = this.getVisibleColCount(scrollLeft);
+        console.log("Update Area called");
+
+        console.log(scrollTop + this.container.clientHeight, this.dataCanvas.height);
+
+        if (scrollTop + this.container.clientHeight >= this.dataCanvas.height) {
+            // alert('data called')
             this.batchStart += 30;
             const data = await this.getData(this.batchStart);
+
             if (data.length > 0) {
                 this.sampleData.push(...data);
-                this.updateCanvasSizes();
+                this.storeData();
+            } else {
+                this.addRows();
             }
-            this.isLoadingData = false;
+            this.updateCanvasSizes();
         }
 
-
-        this.drawHeader();
-        this.drawRowCanvas();
-        this.drawVisibleData(visibleArea);
-    }
-
-    drawVisibleData(visibleArea) {
-        this.cData.clearRect(0, 0, this.dataCanvas.width, this.dataCanvas.height);
-
-        const startRow = Math.max(0, visibleArea.startRow - this.visibleRowsBuffer);
-        const endRow = Math.min(this.sampleData.length, visibleArea.endRow + this.visibleRowsBuffer);
-
-        for (let rowIndex = startRow; rowIndex < endRow; rowIndex++) {
-            let x = 0;
-            const rowData = this.sampleData[rowIndex];
-            const y = (rowIndex - startRow) * this.cellHeight;
-
-            for (let colIndex = visibleArea.startCol; colIndex < visibleArea.endCol && colIndex < this.headers.length; colIndex++) {
-                const header = this.headers[colIndex];
-                const dataKey = header.data;
-                const cellValue = rowData[dataKey] || "";
-                
-                new TableCell(x, y, header.width, this.cellHeight, cellValue).draw(this.cData);
-                x += header.width;
-            }
+        if (scrollLeft + this.container.clientWidth >= this.dataCanvas.width) {
+            this.addColumns();
         }
-    }
 
-    updateCanvasSizes() {
-        const totalWidth = this.headers.reduce((sum, header) => sum + header.width, 0);
-        const visibleHeight = this.container.clientHeight;
-        
-        this.headerCanvas.width = this.headers[0].width + totalWidth;
-        this.headerCanvas.height = this.headerHeight;
-        
-        this.rowNumberCanvas.width = this.headers[0].width;
-        this.rowNumberCanvas.height = visibleHeight + this.cellHeight * (this.visibleRowsBuffer * 2);
-        
-        this.dataCanvas.width = totalWidth;
-        this.dataCanvas.height = visibleHeight + this.cellHeight * (this.visibleRowsBuffer * 2);
-   
+        this.drawTable();
     }
 
     getRowIndexAtY(y) {
