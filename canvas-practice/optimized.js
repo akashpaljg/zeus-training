@@ -150,6 +150,7 @@ class CanvasTable {
             currentX: 0
         };
 
+        this.colHeight = 30;
         
         this.resizeState = { isResizing: false, columnIndex: -1, startX: 0 };
         this.rowResizeState = {isResizing:false,rowIndex:-1,startY:0}
@@ -537,11 +538,17 @@ class CanvasTable {
         return this.sampleData.slice(0, index).reduce((sum, header) => sum + header.height, 0);
     }
 
-    updateCanvasSizes() {
+    updateCanvasSizes(scrollTop = null) {
         const totalWidth = this.headers.reduce((sum, header) => sum + header.width, 0);
 
         this.childContainer.style.width = `${totalWidth}px`;
-        this.childContainer.style.height = `${this.container.clientHeight+this.headerHeight*5}px`;
+        if(scrollTop){
+            this.childContainer.style.height = `${scrollTop+this.container.clientHeight+this.headerHeight*5}px`;
+        }else{
+            this.childContainer.style.height = `${this.container.clientHeight+this.headerHeight*5+this.colHeight}px`;
+        }
+        
+
 
         // this.headerCanvas.width = this.headers[0].width+ totalWidth;
         // this.headerCanvas.height = this.headerHeight;
@@ -696,7 +703,7 @@ class CanvasTable {
     drawData(visibleArea=null) {
         // alert("Draw Data")
         let x = 0;
-        this.cData.clearRect(0, 0, this.dataCanvas.width, this.dataCanvas.height);
+        // this.cData.clearRect(0, 0, this.dataCanvas.width, this.dataCanvas.height);
 
         if(visibleArea){
             console.log(visibleArea);
@@ -708,21 +715,23 @@ class CanvasTable {
             const endCol = visibleArea.endCol;
             console.log(this.sampleData[startRow])
             console.log(this.sampleData[endRow])
+          
             let currentY = this.headerHeight;
             for(let i=startRow;i<=endRow;i++){
+                x = 0;
                 const newHeight = this.sampleData[i].height;
                 // console.log(newHeight)
                 this.headers.forEach((header, colIndex) => {
                     //    if (colIndex > 0) {  // Skip the first column (row numbers)
                            const dataHeaderIndex = colIndex - 1; // Adjust for the offset
                            const dataKey = this.dataHeaders[dataHeaderIndex];
-                           const cellValue = this.sampleData[i][dataKey] || "";
-                        //    console.log(`Cell Value: ${cellValue}`)
-                        console.log(`${newHeight} ${colIndex}`)
+                           const cellValue = this.sampleData[i][dataKey] || "" ; 
+                           console.log(`Cell Value: ${cellValue}`)
+                        //    console.log(`${i} ${colIndex}`)
                            
                            const color = this.multiSelectState.data.has(`${i+1}|${colIndex}`) ? "rgba(3, 194, 252,0.5)" : null;
                            
-                           new TableCell(x, currentY, header.width, newHeight, cellValue).draw(this.cData);
+                           new TableCell(x, currentY, header.width, newHeight, cellValue).draw(this.cData,color);
                            x += header.width;
                     //    }
                    });
@@ -750,7 +759,7 @@ class CanvasTable {
                 currentY += newHeight;
             });
         }
-    
+    }
        // Draw data
      
     
@@ -774,7 +783,7 @@ class CanvasTable {
     
         //     document.getElementById('canvasContainer').appendChild(input);
         // }
-    }
+    // }
     
 
     
@@ -784,10 +793,11 @@ class CanvasTable {
 
         this.headerCanvas.style.top = `${scrollTop}px`;
         this.rowNumberCanvas.style.left = `${scrollLeft}px`;
+        this.dataCanvas.style.top = `${scrollTop}px`
 
         // console.log(this.childContainer.clientHeight)
 
-        if (scrollTop - this.lastScrollTop -30 >= this.headerHeight) {
+        if (scrollTop - this.lastScrollTop  >= this.headerHeight) {
             // alert(scrollTop + this.container.clientHeight,this.childContainer.clientHeight);
             console.log("I'm here")
             this.childContainer.style.height = `${scrollTop + this.container.clientHeight}px`;
@@ -826,11 +836,11 @@ class CanvasTable {
         console.log("Update Area called");
 
         // console.log(scrollTop + this.container.clientHeight,(this.childContainer.style.height - this.headerHeight - 60));
-        console.log(this.childContainer.clientHeight)
+        console.log(`Scroll Height: ${this.childContainer.scrollHeight}`)
 
-        if (scrollTop + this.container.clientHeight >= this.childContainer.clientHeight) {
-            // alert('data called')
-            this.batchStart += 50;
+        if (scrollTop + this.container.clientHeight >= (this.sampleData.length * 30)) {
+            alert('data called')
+            this.batchStart += 30;
             const data = await this.getData(this.batchStart);
 
             if (data.length > 0) {
@@ -839,7 +849,7 @@ class CanvasTable {
             } else {
                 this.addRows();
             }
-            this.updateCanvasSizes();
+            this.updateCanvasSizes(scrollTop);
         }
 
         if (scrollLeft + this.container.clientWidth >= this.dataCanvas.width) {
