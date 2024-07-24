@@ -65,6 +65,7 @@ class CanvasTable {
     constructor(containerId, headers,dataHeaders, sampleData) {
         this.container = document.getElementById(containerId);
         this.submitFile = document.getElementById('uploadFileForm');
+        
         this.headerCanvas = document.getElementById('headerCanvas');
         this.dataHeaders = dataHeaders;
 
@@ -128,6 +129,8 @@ class CanvasTable {
             maxWidth: header.maxWidth || 500
         }));
 
+        // this.sampleData = new Array(50);
+
         this.sampleData = sampleData.map(sampleD => ({
             ...sampleD,
             height: sampleD.height || 30,
@@ -149,6 +152,7 @@ class CanvasTable {
             currentX: 0
         };
 
+        this.colHeight = 30;
         
         this.resizeState = { isResizing: false, columnIndex: -1, startX: 0 };
         this.rowResizeState = {isResizing:false,rowIndex:-1,startY:0}
@@ -169,9 +173,19 @@ class CanvasTable {
         this.dataMap = new Map();
 
 
+        this.initializeChildContainer();
+
         this.updateCanvasSizes();
         this.drawTable();
+
         // this.getData(batchStart);
+    }
+
+   
+
+    initializeChildContainer(){
+        this.childContainer = document.getElementById('childContainer');
+
     }
 
     getRowCount(index){
@@ -529,20 +543,35 @@ class CanvasTable {
         return this.sampleData.slice(0, index).reduce((sum, header) => sum + header.height, 0);
     }
 
-    updateCanvasSizes() {
+    updateCanvasSizes(scrollTop = null) {
         const totalWidth = this.headers.reduce((sum, header) => sum + header.width, 0);
-        this.headerCanvas.width = this.headers[0].width+ totalWidth;
+
+        this.childContainer.style.width = `${totalWidth}px`;
+        this.childContainer.style.height = `${this.headerHeight + this.cellHeight * this.sampleData.length}px`
+        
+
+
+        this.headerCanvas.width = this.headers[0].width + totalWidth;
         this.headerCanvas.height = this.headerHeight;
-        this.rowNumberCanvas.width = this.headers[0].width;
-        this.rowNumberCanvas.height = this.headerHeight + this.cellHeight * this.sampleData.length;
+
+        // this.rowNumberCanvas.width = this.headers[0].width;
+        // this.rowNumberCanvas.height = this.headerHeight + this.cellHeight * this.sampleData.length;
+
+        //  data canvas fixed now
         this.dataCanvas.width =  totalWidth;
-        this.dataCanvas.height = this.headerHeight+ this.cellHeight * this.sampleData.length;
+        this.dataCanvas.height = this.container.clientHeight+this.headerHeight;
     }
 
     drawTable() {
-        this.drawHeader();
-        this.drawRowCanvas();
-        this.drawData();
+        window.requestAnimationFrame(() => {
+            this.drawHeader();
+            this.drawRowCanvas();
+            this.drawData();
+        });
+        // this.drawRowCanvas();
+        // window.requestAnimationFrame(() => {
+           
+        // });
     }
 
     handleMouseDown(event) {
@@ -679,75 +708,128 @@ class CanvasTable {
     }
     
 
-    drawData(xcord = null, ycord = null, i = null, j = null, inputWidth = null, columnIndex = null) {
+    drawData(visibleArea=null) {
         // alert("Draw Data")
         let x = 0;
-        this.cData.clearRect(0, 0, this.dataCanvas.width, this.dataCanvas.height);
+        // this.cData.clearRect(0, 0, this.dataCanvas.width, this.dataCanvas.height);
 
-        
-    
-       // Draw data
-       let currentY = this.headerHeight;
-       this.sampleData.forEach((rowData, rowIndex) => {
-           x = 0; // Start from the beginning for data
-           const newHeight = rowData.height || 30;
-   
-           this.headers.forEach((header, colIndex) => {
-            //    if (colIndex > 0) {  // Skip the first column (row numbers)
-                   const dataHeaderIndex = colIndex - 1; // Adjust for the offset
-                   const dataKey = this.dataHeaders[dataHeaderIndex];
-                   const cellValue = rowData[dataKey] || "";
-                //    console.log(Cell Value: ${cellValue})
-                   
-                   const color = this.multiSelectState.data.has(`${rowIndex+1}|${colIndex}`) ? "rgba(3, 194, 252,0.5)" : null;
-                   
-                   new TableCell(x, currentY, header.width, newHeight, cellValue).draw(this.cData, color);
-                   x += header.width;
-            //    }
-           });
-           currentY += newHeight;
-       });
-    
-        if (xcord !== null && ycord !== null && i !== null && j !== null && inputWidth !== null) {
-            const existingInput = document.querySelector('#canvasContainer input');
-            if (existingInput) {
-                existingInput.remove();
+        if(visibleArea){
+            console.log(visibleArea);
+            
+            console.log("visible")
+            const startRow = visibleArea.startRow;
+            const endRow = visibleArea.endRow;
+            const startCol = visibleArea.startCol;
+            const endCol = visibleArea.endCol;
+            console.log(this.sampleData[startRow])
+            console.log(this.sampleData[endRow])
+          
+            let currentY = this.headerHeight;
+            for(let i=startRow;i<=endRow;i++){
+                x = 0;
+                const newHeight = this.headerHeight;
+                // console.log(newHeight)
+                this.headers.forEach((header, colIndex) => {
+                           const dataHeaderIndex = colIndex - 1; 
+                           const dataKey = this.dataHeaders[dataHeaderIndex];
+                           const cellValue = this.sampleData[i][dataKey] || "" ; 
+                           
+                           const color = this.multiSelectState.data.has(`${i+1}|${colIndex}`) ? "rgba(3, 194, 252,0.5)" : null;
+                           
+                           new TableCell(x, currentY, header.width, newHeight, cellValue).draw(this.cData,color);
+                           x += header.width;
+                   });
+                   currentY += newHeight;
             }
-    
-            const input = document.createElement("input");
-            input.placeholder = `${i}${j}`;
-            input.autofocus = true;
-            input.style.top = `${ycord}px`
-            input.style.left = `${xcord}px`
-            input.style.position = "absolute";
-            input.style.width = `${inputWidth - 7}px`;
-            input.style.height = `${this.sampleData[i].height - 5}px`; // Use dynamic row height here
-            input.style.border = "2px solid blue"; // Set border color to blue
-            input.style.borderRadius = "3px";
-            input.style.fontSize = "14px";
-    
-            document.getElementById('canvasContainer').appendChild(input);
+        }else{
+            let currentY = this.headerHeight;
+            this.sampleData.forEach((rowData, rowIndex) => {
+                x = 0; // Start from the beginning for data
+                const newHeight = rowData.height || 30;
+        
+                this.headers.forEach((header, colIndex) => {
+                 //    if (colIndex > 0) {  // Skip the first column (row numbers)
+                        const dataHeaderIndex = colIndex - 1; // Adjust for the offset
+                        const dataKey = this.dataHeaders[dataHeaderIndex];
+                        const cellValue = rowData[dataKey] || "";
+                     //    console.log(Cell Value: ${cellValue})
+                        
+                        const color = this.multiSelectState.data.has(`${rowIndex+1}|${colIndex}`) ? "rgba(3, 194, 252,0.5)" : null;
+                        
+                        new TableCell(x, currentY, header.width, newHeight, cellValue).draw(this.cData, color);
+                        x += header.width;
+                 //    }
+                });
+                currentY += newHeight;
+            });
         }
     }
+       // Draw data
+     
+    
+        // if (xcord !== null && ycord !== null && i !== null && j !== null && inputWidth !== null) {
+        //     const existingInput = document.querySelector('#canvasContainer input');
+        //     if (existingInput) {
+        //         existingInput.remove();
+        //     }
+    
+        //     const input = document.createElement("input");
+        //     input.placeholder = `${i}${j}`;
+        //     input.autofocus = true;
+        //     input.style.top = `${ycord}px`
+        //     input.style.left = `${xcord}px`
+        //     input.style.position = "absolute";
+        //     input.style.width = `${inputWidth - 7}px`;
+        //     input.style.height = `${this.sampleData[i].height - 5}px`; // Use dynamic row height here
+        //     input.style.border = "2px solid blue"; // Set border color to blue
+        //     input.style.borderRadius = "3px";
+        //     input.style.fontSize = "14px";
+    
+        //     document.getElementById('canvasContainer').appendChild(input);
+        // }
+    // }
     
 
     
     handleScroll() {
+
+        // console.log(this.sampleData)
         const scrollLeft = this.container.scrollLeft;
         const scrollTop = this.container.scrollTop;
 
         this.headerCanvas.style.top = `${scrollTop}px`;
         this.rowNumberCanvas.style.left = `${scrollLeft}px`;
+        this.dataCanvas.style.top = `${scrollTop}px`
 
-        if (Math.abs(scrollTop - this.lastScrollTop) > this.headerHeight - 30 ||
-            Math.abs(scrollLeft - this.lastScrollLeft) > this.headers[0].width - 100) {
 
-            this.lastScrollTop = scrollTop;
-            this.lastScrollLeft = scrollLeft;
+        const scrollDirection = scrollTop > this.lastScrollTop ? 'down' : 'up';
+        console.log(scrollDirection);
 
-            this.updateVisibleArea(scrollLeft, scrollTop);
-        }
+        // console.log(this.childContainer.clientHeight)
+        // if(scrollTop <= this.headerHeight-){
+
+        //     this.lastScrollTop = scrollTop;
+        //     this.lastScrollLeft = scrollLeft;
+
+            // this.updateVisibleArea(scrollLeft, scrollTop,scrollDirection);
+        // }
+
+        // if (scrollTop - this.lastScrollTop  >= this.headerHeight) {
+            // alert(scrollTop + this.container.clientHeight,this.childContainer.clientHeight);
+            // console.log("I'm here")
+            // this.childContainer.style.height = `${scrollTop + this.container.clientHeight}px`;
+            // this.childContainer.style.width = `${this.container.clientWidth + scrollLeft}px`;
+
+            // console.log(this.childContainer.clientHeight)
+            
+               
+            
+
+            this.updateVisibleArea(scrollLeft, scrollTop,scrollDirection);
+            // this.childupdate(scrollLeft,scrollTop)
+        // }
     }
+
     getVisibleArea(scrollX, scrollY) {
         const startRow = Math.floor(scrollY / this.headerHeight);
         const endRow = Math.min(Math.ceil((scrollY + this.container.clientHeight+30) / this.headerHeight), this.sampleData.length);
@@ -757,45 +839,70 @@ class CanvasTable {
         return { startRow, endRow, startCol, endCol };
     }
 
-    storeData() {
-        for (let row = 0; row < this.sampleData.length; row++) {
-                this.dataMap.set(`${row}`, this.sampleData[row]);
-        }
-        // alert("data stored")
-        console.log(this.dataMap);
-    }
+    // storeData() {
+    //     for (let row = 0; row < this.sampleData.length; row++) {
+    //             this.dataMap.set(`${row}`, this.sampleData[row]);
+    //     }
+    //     // alert("data stored")
+    //     console.log(this.dataMap);
+    // }
 
-    async updateVisibleArea(scrollLeft, scrollTop) {
-        // alert("Update Visible called")
-        console.log(this.getVisibleArea(scrollLeft,scrollTop));
-        // const startRow = this.getRowIndexAtY(scrollTop);
-        // const startCol = this.getColIndexAtX(scrollLeft);
-
-        // const visibleRowCount = this.getVisibleRowCount(scrollTop);
-        // const visibleColCount = this.getVisibleColCount(scrollLeft);
+    async updateVisibleArea(scrollLeft, scrollTop,scrollDirection) {
+        const visibleArea = this.getVisibleArea(scrollLeft,scrollTop);
+        console.log(visibleArea);
         console.log("Update Area called");
 
-        console.log(scrollTop + this.container.clientHeight, this.dataCanvas.height);
+        // console.log(scrollTop + this.container.clientHeight,(this.childContainer.style.height - this.headerHeight - 60));
+        console.log(`Scroll Height: ${this.childContainer.scrollHeight}`)
 
-        if (scrollTop + this.container.clientHeight >= this.dataCanvas.height) {
-            // alert('data called')
-            this.batchStart += 30;
-            const data = await this.getData(this.batchStart);
-
-            if (data.length > 0) {
-                this.sampleData.push(...data);
-                this.storeData();
-            } else {
-                this.addRows();
+        if(scrollDirection === "up"){
+            // alert("scrolled u[")
+            console.log(visibleArea)
+            if(scrollTop <= this.headerHeight){
+                    // alert("data called")
+                    console.log("data called")
+                    // this.batchStart = Math.max(0, this.batchStart - 30);
+                    // let data = await this.getData(this.batchStart);
+                    // if (data.length > 0) {
+                    //     this.sampleData.unshift(...data);
+                    //     // Adjust scroll position to keep the view stable
+                    //     this.container.scrollTop += data.length * this.headerHeight;
+                    // }
+                    // this.drawData(visibleArea);
             }
-            this.updateCanvasSizes();
+            
+        }else if(scrollDirection === "down"){
+            if (scrollTop + this.container.clientHeight >= (this.sampleData.length * this.headerHeight)) {
+                // alert('data called')
+                this.batchStart += 30;
+                const data = await this.getData(this.batchStart);
+    
+                if (data.length > 0) {
+                    this.sampleData.push(...data);
+                    // this.storeData();
+                } else {
+                    this.addRows();
+                }
+                this.updateCanvasSizes(scrollTop);
+            }
+    
+            if (scrollLeft + this.container.clientWidth >= this.dataCanvas.width) {
+                this.addColumns();
+            }
+            // 
+            // this.drawData(visibleArea);
         }
+        
+        // this.drawData(visibleArea);
+        // window.requestAnimationFrame(drawData(visibleArea));
+        window.requestAnimationFrame(() => {
+            this.drawHeader();
+            this.drawData(visibleArea);
+        });
+        
 
-        if (scrollLeft + this.container.clientWidth >= this.dataCanvas.width) {
-            this.addColumns();
-        }
-
-        this.drawTable();
+        // this.drawTable();
+        
     }
 
     getRowIndexAtY(y) {
@@ -1022,7 +1129,7 @@ window.onload = async function () {
 
     const data = await getData();
     // console.log(dataHeaders);
-    // console.log(data);
+    console.log(data);
     if(data.length > 0){
         sampleData = [{
             id:"Id",
