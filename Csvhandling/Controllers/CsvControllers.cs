@@ -196,7 +196,7 @@ namespace Csvhandling.Controllers
                     
                     _logger.Info("Connection established");
 
-                    csvData = await _mySqlConnection.QueryAsync<CsvModel>("select * from csvhandle.csvdata order by Id desc limit 10;");
+                    csvData = await _mySqlConnection.QueryAsync<CsvModel>("select * from csvhandle.csvdata limit 30;");
                     await _mySqlConnection.CloseAsync();
                     
                     
@@ -206,8 +206,64 @@ namespace Csvhandling.Controllers
                     _logger.Error($"Error occured while getting data from DB {e.Message}");
                     return BadRequest();
                 }
+        }
 
+        [HttpGet]
+        [Route("data/{batchStart}")]
+        public async Task<IActionResult> GetData(int batchStart)
+        {
+            IEnumerable<CsvModel> csvData = null ;
 
+            
+            try{
+                _logger.Info($"=====Data Get {batchStart}=====");
+
+                await _retryPolicy.ExecuteAsync(async ()=>{
+                    
+                    await _mySqlConnection.OpenAsync();
+                    
+                    _logger.Info("Connection established");
+
+                   string query = "SELECT * FROM csvhandle.csvdata LIMIT @BatchSize OFFSET @BatchStart";
+                    csvData = await _mySqlConnection.QueryAsync<CsvModel>(query, new { BatchSize = 30, BatchStart = batchStart });
+
+                    await _mySqlConnection.CloseAsync();
+                    
+                    
+                 });
+                 return Ok(new {data = csvData});
+                }catch(Exception e){
+                    _logger.Error($"Error occured while getting data from DB {e.Message}");
+                    return BadRequest();
+                }
+        }
+
+        [HttpGet]
+        [Route("search/{query}")]
+        public async Task<IActionResult> GetDataWithEmail(string query)
+        {
+            IEnumerable<CsvModel> csvData = null;
+            try
+            {
+                _logger.Info($"=====Search Get {query}=====");
+
+                await _retryPolicy.ExecuteAsync(async () =>
+                {
+                    await _mySqlConnection.OpenAsync();
+                    
+                    _logger.Info("Connection established");
+                    string sqlQuery = "SELECT * FROM csvhandle.csvdata WHERE EmailId = @EmailId";
+                    csvData = await _mySqlConnection.QueryAsync<CsvModel>(sqlQuery, new { EmailId = query });
+
+                    await _mySqlConnection.CloseAsync();
+                });
+                return Ok(new { data = csvData });
+            }
+            catch(Exception e)
+            {
+                _logger.Error($"Error occurred while getting data from DB {e.Message}");
+                return BadRequest();
+            }
         }
 
         [HttpPost]

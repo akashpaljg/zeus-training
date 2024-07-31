@@ -11795,11 +11795,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "c:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
+      "projectUniqueName": "C:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
       "projectName": "Csvhandling",
-      "projectPath": "c:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
+      "projectPath": "C:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\Csvhandling.csproj",
       "packagesPath": "C:\\Users\\akash.pal\\.nuget\\packages\\",
-      "outputPath": "c:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\obj\\",
+      "outputPath": "C:\\Users\\akash.pal\\Desktop\\practice\\Csvhandling\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\akash.pal\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -11943,7 +11943,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.302/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

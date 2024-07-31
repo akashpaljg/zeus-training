@@ -251,6 +251,8 @@ class CanvasTable {
     constructor(containerId, headers,dataHeaders, sampleData) {
         this.container = document.getElementById(containerId);
         this.submitFile = document.getElementById('uploadFileForm');
+        this.searchQuery = document.getElementById('search--email');
+        this.sort = document.getElementById("pet-select");
         
         this.headerCanvas = document.getElementById('headerCanvas');
         this.dataHeaders = dataHeaders;
@@ -272,6 +274,8 @@ class CanvasTable {
 
         // handleSubmitting a file
         this.submitFile.addEventListener("submit",this.handleSubmitFile.bind(this));
+        this.searchQuery.addEventListener("submit",this.handleSearch.bind(this));
+
 
         // data canvas handleClick
         // this.dataCanvas.addEventListener("dblclick", this.handleDbClick.bind(this));
@@ -292,6 +296,7 @@ class CanvasTable {
         this.rowNumberCanvas.addEventListener("mousedown",this.handleRowMouseDown.bind(this));
         this.rowNumberCanvas.addEventListener("mousemove",this.handleRowMouseMove.bind(this));
         this.rowNumberCanvas.addEventListener("mouseup",this.handleRowMouseUp.bind(this));
+        this.sort.addEventListener("change",this.handleSorting.bind(this));
 
         // drag and drop
         // this.headerCanvas.addEventListener("mousedown", this.handleDragStart.bind(this));
@@ -334,6 +339,12 @@ class CanvasTable {
             startX: 0,
             currentX: 0
         };
+
+        this.sortingState = {
+            isSorting:false,
+            columnName:"Id",
+            sortOrder:"asc"
+        }
 
         this.colHeight = 30;
         
@@ -477,14 +488,160 @@ class CanvasTable {
     }
     }
 
+    async handleSearch(event){
+       
+        event.preventDefault();
+        console.log(event.target.query.value);
+        const query = event.target.query.value;
+        // return;
+     
+        try{
+            console.log("Searching");
+            let res = await fetch(`http://localhost:5103/api/check/search/${query}`);
+            const response = await res.json();
+            console.log(response);
+
+            let searchedData = [{
+                id:"Id",
+                emailId:"EmailId",
+                name:"Name",
+                country:"Country",
+                state:"State",
+                city:"City",
+                telephoneNumber:"TelephoneNumber",
+                addressLine1:"AddressLine1",
+                addressLine2:"AddressLine2",
+                dateOfBirth:"DateOfBirth",
+                fY2019_20:"FY2019_20",
+                fY2020_21:"FY2020_21",
+                fY2021_22:"FY2021_22",
+                fY2022_23:"FY2022_23",
+                fY2023_24:"FY2023_24",
+                height:30,minHeight:10,maxHeight:60
+            }];
+
+            if (response.data.length > 0) {
+                response.data.map((d)=>{
+                    searchedData.push(
+                        {
+                            ...d,
+                            height:30,minHeight:10,maxHeight:60
+                        }
+                    )
+                })
+            } else {
+                this.addRows();
+                return;
+            }
+
+            this.sampleData = searchedData;
+            console.log(this.sampleData)
+            this.addRows();
+            console.log("I'm above updating canvas size")
+            this.updateCanvasSizes(0);
+            console.log("I'm drawing table")
+            this.visibleArea = {
+                startRow : 0,
+                endRow:Math.ceil(this.container.clientHeight/this.headerHeight),
+                startCol:0,
+                endCol:Math.ceil(this.container.clientWidth/this.headers[0].width)
+            }
+            this.drawTable(this.headers,this.visibleArea);
+            console.log("Huu Done")
+
+        }catch(error){
+            console.error(error);
+        }finally{
+            console.log("searched")
+        }
+    }
+
+    async handleSorting(event){
+        console.log(event.target.value)
+        this.sort = {
+            isSorting : true,
+            columnName : event.target.value || "Id",
+            sortOrder: "asc"
+        }
+    }
+
+    // async handleSorting(event){
+    //     event.preventDefault();
+    //     console.log(event.target.query.value);
+    //     const query = event.target.query.value;
+    //     // return;
+     
+    //     try{
+    //         console.log("Searching");
+    //         let res = await fetch(`http://localhost:5103/api/check/sort/${query}`);
+    //         const response = await res.json();
+    //         console.log(response);
+
+    //         let searchedData = [{
+    //             id:"Id",
+    //             emailId:"EmailId",
+    //             name:"Name",
+    //             country:"Country",
+    //             state:"State",
+    //             city:"City",
+    //             telephoneNumber:"TelephoneNumber",
+    //             addressLine1:"AddressLine1",
+    //             addressLine2:"AddressLine2",
+    //             dateOfBirth:"DateOfBirth",
+    //             fY2019_20:"FY2019_20",
+    //             fY2020_21:"FY2020_21",
+    //             fY2021_22:"FY2021_22",
+    //             fY2022_23:"FY2022_23",
+    //             fY2023_24:"FY2023_24",
+    //             height:30,minHeight:10,maxHeight:60
+    //         }];
+
+    //         if (response.data.length > 0) {
+    //             response.data.map((d)=>{
+    //                 searchedData.push(
+    //                     {
+    //                         ...d,
+    //                         height:30,minHeight:10,maxHeight:60
+    //                     }
+    //                 )
+    //             })
+    //         } else {
+    //             this.addRows();
+    //             return;
+    //         }
+
+    //         this.sampleData = searchedData;
+    //         console.log(this.sampleData)
+    //         this.addRows();
+    //         console.log("I'm above updating canvas size")
+    //         this.updateCanvasSizes(0);
+    //         console.log("I'm drawing table")
+    //         this.visibleArea = {
+    //             startRow : 0,
+    //             endRow:Math.ceil(this.container.clientHeight/this.headerHeight),
+    //             startCol:0,
+    //             endCol:Math.ceil(this.container.clientWidth/this.headers[0].width)
+    //         }
+    //         this.drawTable(this.headers,this.visibleArea);
+    //         console.log("Huu Done")
+
+    //     }catch(error){
+    //         console.error(error);
+    //     }finally{
+    //         console.log("searched")
+    //     }
+    // }
+
    
     handleDataDown(event) {
         const rect = this.dataCanvas.getBoundingClientRect();
         // alert(this.visibleArea.startCol)
-        let width = (this.visibleArea.startCol+1) < 0 ? 0: this.getCumulativeWidthTillColumn(this.visibleArea.startCol+1);
+        let width = (this.visibleArea.startCol) < 0 ? 0: this.getCumulativeWidthTillColumn(this.visibleArea.startCol);
         const x = (event.clientX - rect.left ) + width;
         let height = this.visibleArea.startRow < 0 ? 0 : this.getCumulativeHeightTillRow(this.visibleArea.startRow);
         const y = (event.clientY - rect.top) + height;
+
+        console.log(`X : ${x} Y: ${y}`)
     
         const colIndex = this.getPositionX(x);
         const rowIndex = this.getPositionY(y);
@@ -670,6 +827,7 @@ class CanvasTable {
         let cumulativeHeight = this.headerHeight;
         for(let i=0;i<this.sampleData.length;i++){
             cumulativeHeight += this.sampleData[i].height;
+            console.log(cumulativeHeight)
             if(y <= cumulativeHeight){
                 return i;
             }
@@ -1102,7 +1260,7 @@ getCumulativeHeightTillRow(startRow){
             if (this.multiSelectState.endCell && this.multiSelectState.startCell &&
                 ((index >= this.multiSelectState.startCell.col && index <= this.multiSelectState.endCell.col) ||
                  (index >= this.multiSelectState.endCell.col && index <= this.multiSelectState.startCell.col))) {
-                updateSelectionBounds(index, x, header.width, this.headerHeight);
+                updateSelectionBounds(index, x+100, header.width, this.headerHeight);
             }
 
             x += headerWidth;
@@ -1149,7 +1307,7 @@ getCumulativeHeightTillRow(startRow){
                     new TableCell(x+100, currentY, header.width, newHeight, cellValue).draw(this.cData, color);
     
                     if (color) {
-                        updateSelectionBounds(i, colIndex, x, currentY, header.width, newHeight);
+                        updateSelectionBounds(i, colIndex, x+100, currentY, header.width, newHeight);
                     }
     
                     x += header.width;
@@ -1170,7 +1328,7 @@ getCumulativeHeightTillRow(startRow){
                     new TableCell(x, currentY, header.width, newHeight, cellValue).draw(this.cData, color);
     
                     if (color) {
-                        updateSelectionBounds(rowIndex, colIndex, x, currentY, header.width, newHeight);
+                        updateSelectionBounds(rowIndex, colIndex, x+100, currentY, header.width, newHeight);
                     }
     
                     x += header.width;
@@ -1358,11 +1516,26 @@ getVisibleArea(scrollX, scrollY) {
 
     async addRows() {
         for (let i = 0; i < 30; i++) {
-            let row = {};
-            this.headers.forEach((header, index) => {
-                row[header.data] = "";
+            // let row = {};
+            
+            this.sampleData.push({
+                id:"",
+                emailId:"",
+                name:"",
+                country:"",
+                state:"",
+                city:"",
+                telephoneNumber:"",
+                addressLine1:"",
+                addressLine2:"",
+                dateOfBirth:"",
+                fY2019_20:"",
+                fY2020_21:"",
+                fY2021_22:"",
+                fY2022_23:"",
+                fY2023_24:"",
+                height:30,minHeight:10,maxHeight:60
             });
-            this.sampleData.push(row);
         }
         this.updateCanvasSizes();
     }
@@ -1441,6 +1614,7 @@ getVisibleArea(scrollX, scrollY) {
             this.drawData(xcord, ycord, this.headers[colIndex].data, rowIndex + 1, this.headers[colIndex].width);
         }
     }
+
     async getData(batchStart){
             try{
                 const res = await fetch(`http://localhost:5103/api/check/data/${batchStart}`);
@@ -1452,6 +1626,8 @@ getVisibleArea(scrollX, scrollY) {
                 return [];
             }
     }
+
+   
    
 }
 
