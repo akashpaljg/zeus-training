@@ -87,11 +87,11 @@ class LineDrawer{
     
 
 
-    drawHeaders(rows,cols,headerss){
+    drawHeaders(rows,cols,headerss,visibleArea){
         console.log(`Headers : ${headerss[0]?.width}`);
         // this.cData.clearRect(0,0,this.dataCanvas.clientWidth,this.dataCanvas.clientHeight)
         let x = 0;
-        for(let c=0;c<=cols;c++){
+        for(let c=visibleArea.startCol;c<=visibleArea.endCol;c++){
             // console.log(x);
             this.drawLine(x+0.5,0,x+0.5,30,this.cHeader);
             x += headerss[c]?.width ? headerss[c]?.width : 100;
@@ -111,7 +111,7 @@ class LineDrawer{
         this.cData.lineCap = 'butt';  // Use 'butt' for crisp edges
     
         let x = 100;  // Start at 100 to account for the initial offset
-        for (let c = 0; c <= cols; c++) {
+        for (let c = visibleArea.startCol; c <= visibleArea.endCol; c++) {
             x = Math.round(x);  // Round to nearest pixel
             this.cData.beginPath();
             this.cData.moveTo(x+0.5, 30+0.5);
@@ -160,9 +160,9 @@ class LineDrawer{
     }
 
 
-    drawH(headerss){
+    drawH(headerss,visibleArea){
         
-            this.drawHeaders(1,30,headerss);
+            this.drawHeaders(1,30,headerss,visibleArea);
         
     }
     drawR(headerss,sampleDatas,visibleArea){
@@ -181,7 +181,7 @@ class LineDrawer{
         // this.cRow.clearRect(0,0,this.rowCanvas.clientWidth,this.rowCanvas.clientHeight)
         window.requestAnimationFrame(()=>{
             // console.log('header')
-            this.drawH(headerss);
+            this.drawH(headerss,visibleArea);
             console.log('data')
             this.drawD(headerss,sampleDatas,visibleArea);
             console.log('row')
@@ -337,8 +337,9 @@ class CanvasTable {
 
         this.colHeight = 30;
         
-        this.resizeState = { isResizing: false, columnIndex: -1, startX: 0 };
+        this.resizeState = { isResizing: false, columnIndex: -1, startX: 0,startScrollLeft:0 };
         this.rowResizeState = {isResizing:false,rowIndex:-1,startY:0,startScrollTop:0}
+
 
         this.firstEle.style.width = `6.2rem`;
         this.firstEle.style.height = `1.8rem`;
@@ -822,7 +823,7 @@ class CanvasTable {
         this.headerCanvas.height = this.headerHeight;
 
         this.rowNumberCanvas.width = this.headers[0].width;
-        this.rowNumberCanvas.height = this.container.clientHeight+this.headerHeight;
+        this.rowNumberCanvas.height = this.container.clientHeight;
 
         //  data canvas fixed now
         this.dataCanvas.width = this.container.clientWidth;
@@ -832,7 +833,7 @@ class CanvasTable {
     drawTable(headers,visibleArea) {
         console.log(`Visible Rows: ${visibleArea.startRow}`)
         window.requestAnimationFrame(() => {
-            this.drawHeader();
+            this.drawHeader(visibleArea);
             this.drawData(visibleArea);
             this.drawRowCanvas(visibleArea);
         });
@@ -841,14 +842,16 @@ class CanvasTable {
   
     handleMouseDown(event) {
         const rect = this.headerCanvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
+        const width = this.getCumulativeWidthTillColumn(this.visibleArea.startCol);
+        const x = event.clientX - rect.left + width;
        
         const columnIndex = this.getColumnIndexAtX(x);
         if (columnIndex !== -1) {
             this.resizeState = {
                 isResizing: true,
                 columnIndex: columnIndex,
-                startX: event.clientX
+                startX: event.clientX,
+                startScrollLeft:this.container.scrollLeft
             };
         }
     }
@@ -882,23 +885,28 @@ class CanvasTable {
     handleMouseMove(event) {
         console.log(`Visible Area; ${this.visibleArea.startRow}`)
         if (this.resizeState.isResizing) {
-            
-            const diff = event.clientX - this.resizeState.startX;
+            const currentScrollLeft = this.container.scrollLeft;
+            const scrollDiff = currentScrollLeft - this.resizeState.startScrollLeft;
+            const diff = (event.clientX - this.resizeState.startX)+ scrollDiff;
             const header = this.headers[this.resizeState.columnIndex];
             const newWidth = Math.max(
                 header.minWidth,
                 Math.min(header.maxWidth, header.width + diff)
             );
-            header.width = newWidth;
+            // header.width = newWidth;
+            this.headers[this.resizeState.columnIndex].width = newWidth
             this.resizeState.startX = event.clientX;
+            this.resizeState.startScrollLeft = currentScrollLeft;
 
+            console.log(this.headers)
             
             this.updateCanvasSizes();
             
             this.drawTable(this.headers,this.visibleArea);
         } else {
             const rect = this.headerCanvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
+            const width = this.getCumulativeWidthTillColumn(this.visibleArea.startCol);
+            const x = event.clientX - rect.left + width;
             const columnIndex = this.getColumnIndexAtX(x);
             this.headerCanvas.style.cursor = columnIndex !== -1 ? 'col-resize' : 'default';
         }
@@ -1013,86 +1021,6 @@ getCumulativeHeightTillRow(startRow){
             return this.headers.map(header => sum += header.width);
     }
 
-    // drawHeader(visibleArea = null) {
-    //     // Clear the header canvas
-    //     this.cHeader.clearRect(0, 0, this.headerCanvas.width, this.headerCanvas.height);
-    //     let x = 0;
-    //     let selectionBounds = { top: Infinity, left: Infinity, bottom: -Infinity, right: -Infinity };
-    
-    //     const updateSelectionBounds = (rowIndex, colIndex, x, y, width, height) => {
-    //         selectionBounds.top = Math.min(selectionBounds.top, y);
-    //         selectionBounds.left = Math.min(selectionBounds.left, x);
-    //         selectionBounds.bottom = Math.max(selectionBounds.bottom, y + height);
-    //         selectionBounds.right = Math.max(selectionBounds.right, x + width);
-    //     };
-    
-    //     const startCol = visibleArea ? visibleArea.startCol : 0;
-    //     const endCol = visibleArea ? visibleArea.endCol : this.headers.length - 1;
-    
-    //     for (let index = startCol; index <= endCol; index++) {
-    //         const header = this.headers[index];
-    //         new TableCell(x, 0, header.width, this.headerHeight, header.data, true).draw(this.cHeader);
-    //         if (this.multiSelectState.endCell && this.multiSelectState.startCell && 
-    //             ((index >= this.multiSelectState.startCell.col && index <= this.multiSelectState.endCell.col) || 
-    //              (index >= this.multiSelectState.endCell.col && index <= this.multiSelectState.startCell.col))) {
-    //             updateSelectionBounds(0, index, x, 0, header.width, this.headerHeight);
-    //         }
-    //         x += header.width;
-    //     }
-    
-    //     if (selectionBounds.top !== Infinity) {
-    //         this.cHeader.fillStyle = "rgba(178, 222, 39,0.3)";
-    //         this.cHeader.lineWidth = 2;
-    //         this.cHeader.fillRect(selectionBounds.left + 0.5, selectionBounds.top + 0.5, selectionBounds.right - selectionBounds.left, selectionBounds.bottom - selectionBounds.top);
-    //     }
-    // }
-    
-
-    // drawRowCanvas(visibleArea=null) {
-    //     // this.cRow.clearRect(0, 0, this.rowNumberCanvas.width, this.rowNumberCanvas.height);
-    //     console.log(`Row Canvas ${visibleArea?.startRow} ${visibleArea?.endRow}`)
-    //     let selectionBounds = { top: Infinity, left: Infinity, bottom: -Infinity, right: -Infinity };
-    
-    //     const updateSelectionBounds = (rowIndex, colIndex, x, y, width, height) => {
-    //         selectionBounds.top = Math.min(selectionBounds.top, y);
-    //         selectionBounds.left = Math.min(selectionBounds.left, x);
-    //         selectionBounds.bottom = Math.max(selectionBounds.bottom, y + height);
-    //         selectionBounds.right = Math.max(selectionBounds.right, x + width);
-    //     };
-
-    //     if(visibleArea){
-    //         let currentY = this.headerHeight;
-    //         for(let i=visibleArea.startRow;i<=visibleArea.endRow;i++){
-    //             const newHeight = this.sampleData[i].height ? this.sampleData[i].height:30;
-    //             new TableCell(0, currentY, this.headers[0].width,newHeight , i+1, true).draw(this.cRow);
-
-    //             if( this.multiSelectState.startCell && this.multiSelectState.endCell &&(( i>=this.multiSelectState.startCell.row && i <= this.multiSelectState.endCell.row) || ( i>=this.multiSelectState.endCell.row && i <= this.multiSelectState.startCell.row))){
-    //                 updateSelectionBounds(i+1,0,0,currentY,this.headers[0].width,newHeight);
-    //             }
-                
-    //             currentY += newHeight;
-    //         }
-    //     }else{
-    //         let currentY = this.headerHeight;
-    //         this.sampleData.forEach((data, rowIndex) => {
-    //             const newHeight = data.height ? data.height:30;
-    //             new TableCell(0, currentY, this.headers[0].width,newHeight , rowIndex + 1, true).draw(this.cRow);
-    //             if(this.multiSelectState.endCell && this.multiSelectState.startCell && rowIndex>=this.multiSelectState.startCell.row && rowIndex <= this.multiSelectState.endCell.row){
-    //                 updateSelectionBounds(rowIndex+1,0,0,currentY,this.headers[0].width,newHeight);
-    //             }
-    //             currentY += newHeight;
-    //         });
-    //     }
-
-        
-    //     if (selectionBounds.top !== Infinity) {
-            
-    //         this.cRow.fillStyle = "rgba(178, 222, 39,0.3)";
-    //         this.cRow.lineWidth = 2;
-    //         this.cRow.fillRect(selectionBounds.left, selectionBounds.top, selectionBounds.right - selectionBounds.left, selectionBounds.bottom - selectionBounds.top);
-    //     }
-        
-    // }
     drawRowCanvas(visibleArea = null) {
         // Clear the row canvas before drawing
         this.cRow.clearRect(0, 0, this.rowNumberCanvas.width, this.rowNumberCanvas.height);
@@ -1145,7 +1073,7 @@ getCumulativeHeightTillRow(startRow){
     
     drawHeader(visibleArea = null) {
         this.cHeader.clearRect(0, 0, this.headerCanvas.width, this.headerCanvas.height);
-        let x = 0;
+       
         let selectionBounds = { top: Infinity, left: Infinity, bottom: -Infinity, right: -Infinity };
     
         const updateSelectionBounds = (colIndex, x, width, height) => {
@@ -1157,17 +1085,30 @@ getCumulativeHeightTillRow(startRow){
     
         const startCol = visibleArea ? visibleArea.startCol : 0;
         const endCol = visibleArea ? visibleArea.endCol : this.headers.length - 1;
-    
-        for (let index = startCol; index <= endCol; index++) {
+
+        let x = 0;
+        // let x = this.headers.slice(0, startCol).reduce((sum, header) => sum + (header.width || 100), 0);
+
+        for (let index = startCol; index < endCol; index++) {
             const header = this.headers[index];
-            new TableCell(x, 0, header.width, this.headerHeight, header.data, true).draw(this.cHeader);
+            // alert(header)
+            console.log(header); 
+            const headerWidth = header.width || 100;
+            console.log(`StartCol: ${startCol} & Width: ${this.headers[startCol].width} & Data: ${this.headers[startCol].data}`)
+            // const roundedX = Math.round(x);
+
+            new TableCell(x, 0, headerWidth, 30, header.data, true).draw(this.cHeader);
+
             if (this.multiSelectState.endCell && this.multiSelectState.startCell &&
                 ((index >= this.multiSelectState.startCell.col && index <= this.multiSelectState.endCell.col) ||
                  (index >= this.multiSelectState.endCell.col && index <= this.multiSelectState.startCell.col))) {
                 updateSelectionBounds(index, x, header.width, this.headerHeight);
             }
-            x += header.width;
+
+            x += headerWidth;
+            
         }
+       
     
         if (selectionBounds.left !== Infinity) {
             this.cHeader.fillStyle = "rgba(178, 222, 39,0.3)";
@@ -1199,7 +1140,7 @@ getCumulativeHeightTillRow(startRow){
                 x = 0;
                 const newHeight = this.sampleData[i].height || 30;
     
-                for (let colIndex = startCol; colIndex <= endCol; colIndex++) {
+                for (let colIndex = startCol; colIndex < endCol; colIndex++) {
                     const header = this.headers[colIndex];
                     const dataHeaderIndex = colIndex - 1; 
                     const dataKey = this.dataHeaders[dataHeaderIndex];
@@ -1269,19 +1210,52 @@ getCumulativeHeightTillRow(startRow){
         this.updateVisibleArea(scrollLeft, scrollTop,scrollDirection);
     }
 
-    getVisibleArea(scrollX, scrollY) {
-        const startRow = Math.floor(scrollY / this.headerHeight);
-        const endRow = Math.min(Math.ceil((scrollY + this.container.clientHeight+30) / this.headerHeight), this.sampleData.length);
-        const startCol = Math.floor(scrollX / this.headers[0].width);
-        const endCol = Math.min(Math.ceil((scrollX + this.container.clientWidth+100) / this.headers[0].width), this.headers.length);
+getVisibleArea(scrollX, scrollY) {
+    // For rows
+    const startRow = Math.floor(scrollY / this.headerHeight);
+    const endRow = Math.min(Math.ceil((scrollY + this.container.clientHeight) / this.headerHeight), this.sampleData.length - 1);
+    console.log(`ScrollX : ${scrollX}`)
 
-        return { startRow, endRow, startCol, endCol };
+    // For columns
+    let accumulatedWidth = 0;
+    let startCol = 0;
+    let endCol = 0;
+
+    for (let i = 1; i < this.headers.length; i++) {
+        const columnWidth = this.headers[i].width || 100;
+        if (scrollX >= accumulatedWidth + columnWidth) {
+            startCol = i ;
+        } else {
+            break;
+        }
+        accumulatedWidth += columnWidth;
     }
+
+    // Find endCol
+    accumulatedWidth = 0;
+    for (let i = 1; i < this.headers.length; i++) {
+        const columnWidth = this.headers[i].width || 100;
+        accumulatedWidth += columnWidth;
+        if (accumulatedWidth >  scrollX + this.container.clientWidth) {
+            endCol = i+1;
+            break;
+        }
+    }
+    // If we haven't found an endCol, set it to the last column
+    if (endCol === 0) endCol = this.headers.length - 1;
+
+    return { startRow, endRow, startCol, endCol };
+}
 
 
     async updateVisibleArea(scrollLeft, scrollTop,scrollDirection) {
         this.visibleArea = this.getVisibleArea(scrollLeft,scrollTop);
         console.log(this.visibleArea);
+
+        console.log(`StartRow: `)
+        console.log(this.sampleData[this.visibleArea.startRow]);
+        console.log(`StartCol:`)
+        console.log(this.sampleData[this.visibleArea.startRow])
 
 
         console.log(`Scroll Height: ${this.childContainer.scrollHeight}`)
@@ -1313,15 +1287,13 @@ getCumulativeHeightTillRow(startRow){
                 this.updateCanvasSizes(scrollTop);
                
             }
-            // console.log(`scrollLeft: ${scrollLeft}`);
-            // console.log(`dataCanvas.width: ${this.dataCanvas.width}`);
-            // console.log(`childContainer.clientWidth: ${this.childContainer.clientWidth}`);
         }
-        if (scrollLeft + this.container.clientWidth + this.headers[0].width >= this.childContainer.clientWidth) {
-            // alert("Scrolling horizontally")
+        if (scrollLeft + this.container.clientWidth  >= this.childContainer.clientWidth) {
+            // alert("added columns")
             this.addColumns();
             
         }
+        
         window.requestAnimationFrame(() => {
             this.drawHeader(this.visibleArea);
             this.drawData(this.visibleArea);
@@ -1334,31 +1306,32 @@ getCumulativeHeightTillRow(startRow){
     }
 
     getRowIndexAtY(y) {
-        let cumulativeHeight = 0;
-        for (let i = 0; i < this.rowHeights.length; i++) {
-            cumulativeHeight += this.rowHeights[i];
+        let cumulativeHeight = this.headerHeight;
+        for (let i = 0; i < this.sampleData.length; i++) {
+            cumulativeHeight += this.sampleData[i].height
             if (cumulativeHeight > y) {
                 return i;
             }
         }
-        return this.rowHeights.length - 1;
+        return this.sampleData.length - 1;
     }
 
     getColIndexAtX(x) {
         let cumulativeWidth = 0;
-        for (let i = 0; i < this.colWidths.length; i++) {
-            cumulativeWidth += this.colWidths[i];
+        for (let i = 0; i < this.headers.length; i++) {
+            cumulativeWidth += this.headers[i].width;
             if (cumulativeWidth > x) {
                 return i;
             }
         }
-        return this.colWidths.length - 1;
+        return this.headers.length - 1;
     }
 
     getVisibleRowCount(scrollTop) {
         let visibleHeight = this.getVisibleHeight();
         let cumulativeHeight = 0;
         let count = 0;
+
         for (let i = this.getRowIndexAtY(scrollTop); i < this.rowHeights.length; i++) {
             cumulativeHeight += this.rowHeights[i];
             if (cumulativeHeight > visibleHeight) {
@@ -1469,10 +1442,15 @@ getCumulativeHeightTillRow(startRow){
         }
     }
     async getData(batchStart){
-        const res = await fetch(`http://localhost:5103/api/check/data/${batchStart}`);
-            const response = await res.json();
-            // console.log(response.data);
-            return response.data;
+            try{
+                const res = await fetch(`http://localhost:5103/api/check/data/${batchStart}`);
+                const response = await res.json();
+                // console.log(response.data);
+                return response.data;
+            }catch(error){
+                console.log(error);
+                return [];
+            }
     }
    
 }
@@ -1510,10 +1488,15 @@ window.onload = async function () {
       ];
 
     async function getData(){
-        const res = await fetch(`http://localhost:5103/api/check/data`);
+        try{
+            const res = await fetch(`http://localhost:5103/api/check/data`);
             const response = await res.json();
             // console.log(response.data);
             return response.data;
+        }catch(error){
+            console.log(error);
+            return [];
+        }
     }
 
     
