@@ -162,15 +162,15 @@ class LineDrawer{
 
     drawH(headerss,visibleArea){
         
-            this.drawHeaders(1,30,headerss,visibleArea);
+            this.drawHeaders(1,50,headerss,visibleArea);
         
     }
     drawR(headerss,sampleDatas,visibleArea){
-            this.drawRow(30,1,headerss,sampleDatas,visibleArea)
+            this.drawRow(50,1,headerss,sampleDatas,visibleArea)
     }
     drawD(headerss,sampleDatas,visibleArea){
         
-            this.drawData(30,30,headerss,sampleDatas,visibleArea);
+            this.drawData(50,50,headerss,sampleDatas,visibleArea);
         
     }
 
@@ -271,6 +271,26 @@ class CanvasTable {
         this.cRow = this.rowNumberCanvas.getContext("2d");
         this.cData = this.dataCanvas.getContext("2d");
 
+        this.status = document.getElementById("status");
+
+        this.validate = {
+            id: "number",
+            emailId: "email",
+            name: "text",
+            country: "text",
+            state: "text",
+            city: "text",
+            telephoneNumber: "text",
+            addressLine1: "text",
+            addressLine2: "text",
+            dateOfBirth: "datetime-local",
+            fY2019_20: "number",
+            fY2020_21: "number",
+            fY2021_22: "number",
+            fY2022_23: "number",
+            fY2023_24: "number"
+        };
+
 
         // handleSubmitting a file
         this.submitFile.addEventListener("submit",this.handleSubmitFile.bind(this));
@@ -278,7 +298,7 @@ class CanvasTable {
 
 
         // data canvas handleClick
-        // this.dataCanvas.addEventListener("dblclick", this.handleDbClick.bind(this));
+        this.dataCanvas.addEventListener("dblclick", this.handleDbClick.bind(this));
 
         // data canvas multiselect
         this.dataCanvas.addEventListener("mousedown",this.handleDataDown.bind(this));
@@ -307,6 +327,8 @@ class CanvasTable {
         this.cellHeight = 30;
         this.headerHeight = 30;
         this.resizeThreshold = 5;
+
+        this.isLoading = false;
 
         
 
@@ -341,7 +363,7 @@ class CanvasTable {
         };
 
         this.sortingState = {
-            isSorting:false,
+            isSorting:true,
             columnName:"Id",
             sortOrder:"asc"
         }
@@ -556,14 +578,94 @@ class CanvasTable {
         }
     }
 
-    async handleSorting(event){
-        console.log(event.target.value)
-        this.sort = {
-            isSorting : true,
-            columnName : event.target.value || "Id",
-            sortOrder: "asc"
+    async handleSorting(event) {
+        try {
+            console.log(event.target.value);
+    
+            // Update sorting state
+            this.sortingState = {
+                isSorting: true,
+                columnName: event.target.value || "Id",
+                sortOrder: "asc"
+            };
+    
+            // Reset batch start
+            this.batchStart = 0;
+            this.container.scrollTop = 0;
+            this.container.scrollLeft = 0;
+    
+            // Reset visible area
+            this.visibleArea = {
+                startRow: 0,
+                endRow: Math.ceil(this.container.clientHeight / this.headerHeight),
+                startCol: 0,
+                endCol: Math.ceil(this.container.clientWidth / this.headers[0].width)
+            };
+    
+            // Fetch sorted data
+            const data = await this.getData(this.batchStart);
+    
+            // Prepare sorted data with additional properties
+            let sortedData = [{
+                id: "Id",
+                emailId: "EmailId",
+                name: "Name",
+                country: "Country",
+                state: "State",
+                city: "City",
+                telephoneNumber: "TelephoneNumber",
+                addressLine1: "AddressLine1",
+                addressLine2: "AddressLine2",
+                dateOfBirth: "DateOfBirth",
+                fY2019_20: "FY2019_20",
+                fY2020_21: "FY2020_21",
+                fY2021_22: "FY2021_22",
+                fY2022_23: "FY2022_23",
+                fY2023_24: "FY2023_24",
+                height: 30,
+                minHeight: 10,
+                maxHeight: 60
+            }];
+    
+            if (data.length > 0) {
+                data.forEach(d => {
+                    sortedData.push({
+                        ...d,
+                        height: 30,
+                        minHeight: 10,
+                        maxHeight: 60
+                    });
+                });
+            } else {
+                this.addRows();
+                return;
+            }
+    
+            // Update sample data
+            this.sampleData = sortedData;
+    
+            // Clear canvas
+            // this.clearCanvas();
+    
+            // Update canvas sizes
+            this.updateCanvasSizes();
+    
+            // Draw table with new data
+            this.drawTable(this.headers, this.visibleArea);
+    
+            console.log(this.sampleData);
+            console.log(this.sortingState);
+        } catch (error) {
+            console.log(error);
         }
     }
+    
+    // Add a method to clear the canvas
+    // clearCanvas() {
+    //     const ctx = this.canvas.getContext('2d');
+    //     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // }
+    
 
     // async handleSorting(event){
     //     event.preventDefault();
@@ -1344,6 +1446,75 @@ getCumulativeHeightTillRow(startRow){
             this.cData.strokeRect(selectionBounds.left + 0.5, selectionBounds.top + 0.5, selectionBounds.right - selectionBounds.left, selectionBounds.bottom - selectionBounds.top);
         }
     }
+
+    drawInput(xcord, ycord, cellKey, rowIndex, width) {
+
+        // Remove any existing input elements
+        const existingInput = document.getElementById('canvas-input');
+        if (existingInput) {
+            existingInput.remove();
+        }
+
+        let value = this.sampleData[rowIndex][cellKey] ? this.sampleData[rowIndex][cellKey] : "";
+        // Create a new input element
+        const input = document.createElement('input');
+        // alert(this.validate[cellKey])
+        input.type = this.validate[cellKey];
+        input.id = 'canvas-input';
+        input.value = value; // Set the initial value of the input
+        input.style.position = 'absolute';
+        // input.required = true;
+        input.style.zIndex = '5';
+        input.style.left = `${xcord+7}px`;
+        input.style.top = `${ycord}px`;
+        input.style.width = `${width-5}px`;
+        input.style.height = `${this.sampleData[rowIndex].height-5}px`; // Assuming you have a defined cell height
+        input.style.zIndex = '3'; // Ensure it appears above the canvas
+    
+        // Add event listeners to handle input interactions
+        input.addEventListener('blur', (event) => {
+                this.sampleData[rowIndex][cellKey] = input.value;
+
+                this.editData(this.sampleData[rowIndex])
+                input.style.display = "none";
+           
+        });
+    
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                    this.sampleData[rowIndex][cellKey] = input.value;
+                    this.editData(this.sampleData[rowIndex])
+                    input.style.display = "none";
+            
+               
+            }
+        });
+    
+        document.body.appendChild(input);
+    
+        input.focus();
+    }
+
+    async editData(data) {
+        // console.log(typeof(data.emailId))
+        // console.log(typeof(data.))
+        // return;
+        try {
+            await axios.post("http://localhost:5103/api/check/update", data);
+            // Uncomment the next line if you want to show a success alert
+            
+            
+            alert("Success");
+            this.drawTable(this.headers,this.visibleArea);
+        } catch (error) {
+            alert('Error Occurred.\nPossible reasons:\n1. Added Wrong Email Format\n2. Added Wrong Telephone Number Format\n3. Added Empty Value');
+            console.log(error);
+            this.drawTable(this.headers,this.visibleArea);
+        }
+    }
+
+    
+    
     
     
     handleScroll() {
@@ -1406,62 +1577,73 @@ getVisibleArea(scrollX, scrollY) {
 }
 
 
-    async updateVisibleArea(scrollLeft, scrollTop,scrollDirection) {
-        this.visibleArea = this.getVisibleArea(scrollLeft,scrollTop);
+   async updateVisibleArea(scrollLeft, scrollTop, scrollDirection) {
+    this.visibleArea = this.getVisibleArea(scrollLeft, scrollTop);
+    console.log(this.visibleArea);
+
+    console.log(`StartRow: `);
+    console.log(this.sampleData[this.visibleArea.startRow]);
+    console.log(`StartCol:`);
+    console.log(this.sampleData[this.visibleArea.startRow]);
+
+    console.log(`Scroll Height: ${this.childContainer.scrollHeight}`);
+
+    if (scrollDirection === "up") {
         console.log(this.visibleArea);
+        if (scrollTop <= this.headerHeight) {
+            // will optimize the sampleData
+        }
+    } else if (scrollDirection === "down") {
+        if (!this.isLoading && scrollTop + this.container.clientHeight  >= (this.sampleData.length * this.headerHeight) - 300) {
+            console.log("");
+            console.log("=========");
+            console.log("=========");
+            console.log("Scrolled down");
+            console.log("=========");
+            console.log("=========");
+            console.log("");
+            this.isLoading = true; // Set loading flag to true
+            this.batchStart += 50;
 
-        console.log(`StartRow: `)
-        console.log(this.sampleData[this.visibleArea.startRow]);
-        console.log(`StartCol:`)
-        console.log(this.sampleData[this.visibleArea.startRow])
-
-
-        console.log(`Scroll Height: ${this.childContainer.scrollHeight}`)
-
-        if(scrollDirection === "up"){
-            console.log(this.visibleArea)
-            if(scrollTop <= this.headerHeight){
-                  // will optimize the sampleData
-                   
-            }
-        }else if(scrollDirection === "down"){
-            if (scrollTop + this.container.clientHeight >= (this.sampleData.length * this.headerHeight)) {
-                console.log("Scrolled down")
-                this.batchStart += 30;
+            try {
                 const data = await this.getData(this.batchStart);
-    
+
                 if (data.length > 0) {
-                    data.map((d)=>{
-                        this.sampleData.push(
-                            {
-                                ...d,
-                                height:30,minHeight:10,maxHeight:60
-                            }
-                        )
-                    })
+                    data.forEach((d) => {
+                        this.sampleData.push({
+                            ...d,
+                            height: 30,
+                            minHeight: 10,
+                            maxHeight: 60
+                        });
+                    });
                 } else {
                     this.addRows();
                 }
+
                 this.updateCanvasSizes(scrollTop);
-               
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                this.isLoading = false; // Reset loading flag
             }
         }
-        if (scrollLeft + this.container.clientWidth  >= this.childContainer.clientWidth) {
-            // alert("added columns")
-            this.addColumns();
-            
-        }
-        
-        window.requestAnimationFrame(() => {
-            this.drawHeader(this.visibleArea);
-            this.drawData(this.visibleArea);
-            this.drawRowCanvas(this.visibleArea);
-            
-        });
-       
-        this.lineDraw.drawExcel(this.headers,this.sampleData,this.visibleArea);
-        
     }
+
+    if (scrollLeft + this.container.clientWidth >= this.childContainer.clientWidth) {
+        // alert("added columns")
+        this.addColumns();
+    }
+
+    window.requestAnimationFrame(() => {
+        this.drawHeader(this.visibleArea);
+        this.drawData(this.visibleArea);
+        this.drawRowCanvas(this.visibleArea);
+    });
+
+    this.lineDraw.drawExcel(this.headers, this.sampleData, this.visibleArea);
+}
+
 
     getRowIndexAtY(y) {
         let cumulativeHeight = this.headerHeight;
@@ -1515,7 +1697,7 @@ getVisibleArea(scrollX, scrollY) {
     }
 
     async addRows() {
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 50; i++) {
             // let row = {};
             
             this.sampleData.push({
@@ -1588,42 +1770,59 @@ getVisibleArea(scrollX, scrollY) {
     
     handleDbClick(event) {
         const rect = this.dataCanvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top ;
-        alert(x);
-        alert(y);
+        let widthTillCol = this.getCumulativeWidthTillColumn(this.visibleArea.startCol);
+        let heightTillRow = this.getCumulativeHeightTillRow(this.visibleArea.startRow);
+        let width = (this.visibleArea.startCol) < 0 ? 0: widthTillCol;
+        const x = (event.clientX - rect.left ) + width;
+        let height = this.visibleArea.startRow < 0 ? 0 :heightTillRow ;
+        const y = (event.clientY - rect.top) + height;
+
+        console.log(`X : ${x} Y: ${y}`)
+
+        const colIndex = this.getPositionX(x);
+        const rowIndex = this.getPositionY(y);
+
+        console.log(`RowIndex: ${rowIndex} ColIndex: ${colIndex}`)
+        // return;
+
+        const startRow = Math.floor(this.container.scrollTop / this.headerHeight);
+        const endRow = Math.floor((this.container.scrollTop + this.container.clientHeight) / this.headerHeight);
     
-        let colIndex = -1;
-        let cumulativeWidth = this.headers[0].width;
-        
-        for (let i = 1; i < this.headers.length; i++) {
-            cumulativeWidth += this.headers[i].width;
-            if (x < cumulativeWidth) {
-                colIndex = i;
-                break;
+    
+        if (rowIndex >= startRow && rowIndex < Math.min(endRow, this.sampleData.length) && 
+        colIndex > 0 && colIndex < this.headers.length) {
+
+            const xcord = this.getCumulativeWidthTillColumn(colIndex-1)-widthTillCol+100;
+            let ycord = 0;
+            if(rowIndex > 0){
+                ycord =  this.getCumulativeHeightTillRow(rowIndex-1)+this.headerHeight + this.headerHeight - heightTillRow + 90;
+            }else{
+                alert("Can't change headers")
+                return;
             }
-        }
-        console.log(colIndex);
-        const rowIndex = Math.floor((y - this.headerHeight) / this.cellHeight);
-    
-        if (rowIndex >= 0 && rowIndex < this.sampleData.length && colIndex > 0 && colIndex < this.headers.length) {
-            const xcord = cumulativeWidth - this.headers[colIndex].width;
-            const ycord = rowIndex * this.cellHeight + this.headerHeight ;
-    
-            const cellValue = this.sampleData[rowIndex][this.headers[colIndex].data];
-            this.drawData(xcord, ycord, this.headers[colIndex].data, rowIndex + 1, this.headers[colIndex].width);
+            
+
+            // alert(`XCord; ${xcord} YCord: ${ycord}`)
+            // return;
+            const cellValue = this.sampleData[rowIndex][this.dataHeaders[colIndex-1]];
+            // alert(cellValue)
+            console.log(`Selected Cell: ${cellValue}`)
+            this.drawInput(xcord, ycord, this.dataHeaders[colIndex-1], rowIndex , this.headers[colIndex].width);
         }
     }
 
     async getData(batchStart){
             try{
-                const res = await fetch(`http://localhost:5103/api/check/data/${batchStart}`);
+                // this.status.textContent = "Loading data..."
+                const res = await fetch(`http://localhost:5103/api/check/data/${batchStart}/${this.sortingState.columnName}/${this.sortingState.sortOrder}`);
                 const response = await res.json();
                 // console.log(response.data);
                 return response.data;
             }catch(error){
                 console.log(error);
                 return [];
+            }finally{
+                // this.status.textContent = "";
             }
     }
 
@@ -1662,10 +1861,16 @@ window.onload = async function () {
         {data:"Y"},
         {data:"Z"}
       ];
+    
+    let batchStart = 0;
+    let sortingState = {
+        columnName: "id",
+        sortOrder: "asc"
+    }
 
     async function getData(){
         try{
-            const res = await fetch(`http://localhost:5103/api/check/data`);
+            const res = await fetch(`http://localhost:5103/api/check/data/${batchStart}/${sortingState.columnName}/${sortingState.sortOrder}`);
             const response = await res.json();
             // console.log(response.data);
             return response.data;
@@ -1727,14 +1932,36 @@ window.onload = async function () {
             fY2021_22:"FY2021_22",
             fY2022_23:"FY2022_23",
             fY2023_24:"FY2023_24",
+            height:30,
+            minHeight:10,
+            maxHeight:60
         },...data];
     }else{
         for (let i = 0; i < 30; i++) {
-            let row = {};
-            headers.forEach((header, index) => {
-                row[header.data] = "";
-            });
-            sampleData.push(row);
+            
+            
+            sampleData.push(
+                {
+                    id:"",
+                    emailId:"",
+                    name:"",
+                    country:"",
+                    state:"",
+                    city:"",
+                    telephoneNumber:"",
+                    addressLine1:"",
+                    addressLine2:"",
+                    dateOfBirth:"",
+                    fY2019_20:"",
+                    fY2020_21:"",
+                    fY2021_22:"",
+                    fY2022_23:"",
+                    fY2023_24:"",
+                    height:30,
+                    minHeight:10,
+                    maxHeight:60
+                }
+            );
         }
     }
 

@@ -209,11 +209,11 @@ namespace Csvhandling.Controllers
         }
 
         [HttpGet]
-        [Route("data/{batchStart}")]
-        public async Task<IActionResult> GetData(int batchStart)
+        [Route("data/{batchStart}/{columnName}/{order}")]
+        public async Task<IActionResult> GetData(int batchStart,string columnName,string order)
         {
             IEnumerable<CsvModel> csvData = null ;
-
+            _logger.Info($"BatchStart: {batchStart} Column: {columnName} Order: {order}");
             
             try{
                 _logger.Info($"=====Data Get {batchStart}=====");
@@ -224,13 +224,14 @@ namespace Csvhandling.Controllers
                     
                     _logger.Info("Connection established");
 
-                   string query = "SELECT * FROM csvhandle.csvdata LIMIT @BatchSize OFFSET @BatchStart";
-                    csvData = await _mySqlConnection.QueryAsync<CsvModel>(query, new { BatchSize = 30, BatchStart = batchStart });
+                   string query = $"SELECT * FROM csvhandle.csvdata ORDER BY {columnName} LIMIT @BatchSize OFFSET @BatchStart";
+                    csvData = await _mySqlConnection.QueryAsync<CsvModel>(query, new { BatchSize = 50, BatchStart = batchStart });
 
                     await _mySqlConnection.CloseAsync();
-                    
+                                        
                     
                  });
+                 
                  return Ok(new {data = csvData});
                 }catch(Exception e){
                     _logger.Error($"Error occured while getting data from DB {e.Message}");
