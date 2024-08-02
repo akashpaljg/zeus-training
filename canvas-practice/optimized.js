@@ -244,7 +244,6 @@ class TableCell {
             c.fillText(line, this.x + 5, this.y + 20 + (index * 15));
         });
     }
-    
 }    
 
 class CanvasTable {
@@ -317,6 +316,12 @@ class CanvasTable {
         this.rowNumberCanvas.addEventListener("mousemove",this.handleRowMouseMove.bind(this));
         this.rowNumberCanvas.addEventListener("mouseup",this.handleRowMouseUp.bind(this));
         this.sort.addEventListener("change",this.handleSorting.bind(this));
+
+        
+
+     
+
+        
 
         // drag and drop
         // this.headerCanvas.addEventListener("mousedown", this.handleDragStart.bind(this));
@@ -393,6 +398,33 @@ class CanvasTable {
             endCol:Math.ceil(this.container.clientWidth/this.headers[0].width)
         }
 
+        // Graph Related
+        // this.ctxParent = document.createElement("div");
+        // this.ctxParent.style.position = "absolute"
+        // this.ctxParent.style.zIndex = "5";
+        // this.ctxParent.style.top = "5px";
+
+        // this.ctx = document.createElement("canvas");
+        // this.ctx.id = 'myChart';
+        // this.ctx.style.display = "none";
+        // this.ctxParent.appendChild(this.ctx);
+        // document.getElementsByClassName('sort-find')[0].appendChild(this.ctxParent);
+        this.createDraggableCanvas();
+        this.graphState = {
+            type:"sum",
+            hidden: true,
+            graphOpt:"bar"
+        };
+
+        this.chart = null;
+        this.showHideGraph = document.getElementById("show--hide--graphs");
+        this.showHideGraph.addEventListener("click", this.handleGraphClick.bind(this));
+
+        this.graphType = document.getElementById("graphT");
+        this.graphType.addEventListener("change",this.handleGraphChange.bind(this));
+
+        this.graphO = document.getElementById("graphO");
+        this.graphO.addEventListener("change",this.handleGraphOChange.bind(this));
 
         this.initializeChildContainer();
 
@@ -400,6 +432,150 @@ class CanvasTable {
         this.drawTable(headers,this.visibleArea); 
     }
 
+    handleGraphOChange(event){
+        // alert(event.target.value)
+        this.graphState.graphOpt = event.target.value;
+        this.graphDraw();
+    }
+
+    graphDraw(){
+
+        if(this.multiSelectState.data.size <= 0){
+            alert('No Value')
+            return;
+        }
+
+        if(this.chart){
+            this.chart.destroy();
+        }
+
+        let resultantArray = this.calculationsGraph();
+
+        
+        
+        let calculationType = `${this.graphState.type}`; // This should be something like 'sum', 'avg', etc.
+        let calculationFunctionName = `${calculationType}Val`; // Creates a function name like 'sumVal', 'avgVal', etc.
+        let result = [];
+        
+        // Check if the method exists and is a function
+        if (typeof this[calculationFunctionName] === 'function') {
+            result = this[calculationFunctionName](resultantArray);
+            console.log(result);
+        }else{
+            alert("Wrong value selected")
+            return;
+        }
+
+        let mainLabel = [];
+
+        // Ensure that sum.length matches the range of columns
+        const sumLength = Math.abs(this.multiSelectState.endCell.col - this.multiSelectState.startCell.col) + 1;
+
+        // Populate mainLabel based on the column indices
+        if (this.multiSelectState.startCell.col <= this.multiSelectState.endCell.col) {
+            for (let i = this.multiSelectState.startCell.col; i < this.multiSelectState.startCell.col + sumLength; i++) {
+                mainLabel.push(`${this.dataHeaders[i - 1]}`);
+            }
+        } else {
+            for (let i = this.multiSelectState.startCell.col; i > this.multiSelectState.startCell.col - sumLength; i--) {
+                mainLabel.push(`${this.dataHeaders[i - 1]}`);
+            }
+        }
+
+        console.log(mainLabel);
+
+        
+
+        if (!this.graphState.hidden ) {
+            this.chart = new Chart(this.ctx, {
+                type: `${this.graphState.graphOpt}`,
+                data: {
+                    labels: mainLabel,
+                    datasets: [{
+                        label: 'Information',
+                        data: result,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    
+        
+        this.calculateAndShowStats();
+    }
+
+    handleGraphChange(event){
+        this.graphState.type = event.target.value;
+
+       this.graphDraw();
+        // console.log(event.target.value);
+    }
+
+    createDraggableCanvas() {
+        this.ctxParent = document.createElement("div");
+        this.ctxParent.style.position = "absolute";
+        this.ctxParent.style.zIndex = "2000";
+        this.ctxParent.style.top = "5px";
+        this.ctxParent.style.left = "5px"; // Set initial position
+        this.ctxParent.style.width = '500px'
+        this.ctxParent.style.height = '300px'
+        this.ctxParent.style.display = "none"; // Initially hidden
+        this.ctxParent.style.border = "1px solid #ccc"; // Optional: styling for the draggable div
+        this.ctxParent.style.backgroundColor = "#fff"; // Optional: background color
+
+        this.ctx = document.createElement("canvas");
+        this.ctx.id = 'myChart';
+        this.ctxParent.appendChild(this.ctx);
+        document.getElementsByClassName('ribbon')[0].appendChild(this.ctxParent);
+
+        // Make the div draggable
+        this.ctxParent.onmousedown = this.dragMouseDown.bind(this);
+    }
+
+    dragMouseDown(e) {
+        e.preventDefault();
+        // Get the mouse cursor position at startup:
+        this.pos3 = e.clientX;
+        this.pos4 = e.clientY;
+
+        this.ctxParent.onmouseup = this.closeDragElement.bind(this);
+        this.ctxParent.onmousemove = this.elementDrag.bind(this);
+    }
+
+    elementDrag(e) {
+        e.preventDefault();
+        // Calculate the new cursor position:
+        this.pos1 = this.pos3 - e.clientX;
+        this.pos2 = this.pos4 - e.clientY;
+        this.pos3 = e.clientX;
+        this.pos4 = e.clientY;
+        // Set the element's new position:
+        this.ctxParent.style.top = (this.ctxParent.offsetTop - this.pos2) + "px";
+        this.ctxParent.style.left = (this.ctxParent.offsetLeft - this.pos1) + "px";
+    }
+
+    closeDragElement() {
+        // Stop moving when mouse button is released:
+        this.ctxParent.onmouseup = null;
+        this.ctxParent.
+        onmousemove = null;
+    }
+
+
+    handleGraphClick(event) {
+        // alert('Clicked');
+        this.ctxParent.style.display = this.graphState.hidden ? "block" : "none";
+        this.graphState.hidden = !this.graphState.hidden;
+
+    }
+    
     initializeChildContainer(){
         this.childContainer = document.getElementById('childContainer');
     }
@@ -765,14 +941,9 @@ class CanvasTable {
     
             const cellKey = `${rowIndex+1}|${colIndex}`;
             this.multiSelectState.data.add(cellKey);
+
     
-            window.requestAnimationFrame(() => {
-                this.drawData(this.visibleArea); 
-                this.drawHeader(this.visibleArea);
-                this.drawRowCanvas(this.visibleArea);
-               
-            });
-            this.lineDraw.drawExcel(this.headers,this.sampleData,this.visibleArea);
+           this.drawTable(this.headers,this.visibleArea);
             
             if (this.sampleData[rowIndex] && this.dataHeaders[colIndex-1]) {
                 console.log('Selected cell data:', this.sampleData[rowIndex][this.dataHeaders[colIndex-1]]);
@@ -824,9 +995,157 @@ class CanvasTable {
 
     handleDataUp() {
         this.multiSelectState.isSelecting = false;
+
+        console.log(this.multiSelectState.data);
+        if(this.chart){
+            this.chart.destroy();
+        }
+
+        let resultantArray = this.calculationsGraph();
+
+        
+        
+        let calculationType = `${this.graphState.type}`; // This should be something like 'sum', 'avg', etc.
+        let calculationFunctionName = `${calculationType}Val`; // Creates a function name like 'sumVal', 'avgVal', etc.
+        let result = [];
+        
+        // Check if the method exists and is a function
+        if (typeof this[calculationFunctionName] === 'function') {
+            result = this[calculationFunctionName](resultantArray);
+            console.log(result);
+        }else{
+            alert("Wrong value selected")
+            return;
+        }
+
+        let mainLabel = [];
+
+        // Ensure that sum.length matches the range of columns
+        const sumLength = Math.abs(this.multiSelectState.endCell.col - this.multiSelectState.startCell.col) + 1;
+
+        // Populate mainLabel based on the column indices
+        if (this.multiSelectState.startCell.col <= this.multiSelectState.endCell.col) {
+            for (let i = this.multiSelectState.startCell.col; i < this.multiSelectState.startCell.col + sumLength; i++) {
+                mainLabel.push(`${this.dataHeaders[i - 1]}`);
+            }
+        } else {
+            for (let i = this.multiSelectState.startCell.col; i > this.multiSelectState.startCell.col - sumLength; i--) {
+                mainLabel.push(`${this.dataHeaders[i - 1]}`);
+            }
+        }
+
+        console.log(mainLabel);
+
+        
+
+        if (!this.graphState.hidden ) {
+            this.chart = new Chart(this.ctx, {
+                type: `${this.graphState.graphOpt}`,
+                data: {
+                    labels: mainLabel,
+                    datasets: [{
+                        label: 'Information',
+                        data: result,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    
         
         this.calculateAndShowStats();
     }
+
+    calculationsGraph() {
+        let selectedCols = new Map(); // Using a Map to store values by column
+    
+        this.multiSelectState.data.forEach((cellKey, index) => {
+            const [row, col] = cellKey.split('|').map(Number);
+            if (col > 0) { // Assuming the first column is row numbers
+                const dataKey = this.dataHeaders[col - 1];
+                const value = this.sampleData[row - 1][dataKey];
+    
+                if (!selectedCols.has(col)) {
+                    selectedCols.set(col, []);
+                }
+    
+                if (Number.isInteger(value)) {
+                    selectedCols.get(col).push(value);
+                } else if (Date.parse(value)) {
+                    const year = new Date(value).getFullYear();
+                    selectedCols.get(col).push(year);
+                }
+            }
+        });
+    
+        // Convert the Map to an array of arrays
+        const selectedColsArray = Array.from(selectedCols.values());
+    
+        console.log(selectedColsArray);
+        return selectedColsArray;
+    }
+
+    sumVal(resultantArray) {
+        let sumArray = [];
+        resultantArray.forEach(d => {
+            let sum = d.reduce((acc, val) => acc + val, 0);
+            sumArray.push(sum);
+        });
+        console.log(sumArray);
+        return sumArray;
+    }
+
+    avgVal(resultantArray) {
+        let avgArray = [];
+        resultantArray.forEach(d => {
+            if (d.length === 0) {
+                avgArray.push(0); // Handle case where the sub-array is empty
+                return;
+            }
+            let sum = d.reduce((acc, val) => acc + val, 0);
+            let avg = sum / d.length; // Calculate average
+            avgArray.push(avg); // Push the average to the result array
+        });
+        console.log(avgArray); // Log the average array
+        return avgArray;
+    }
+
+    maxVal(resultantArray){
+        let maxArray = [];
+        resultantArray.map((d)=>{
+            let sValue = -1;
+            d.map((e)=>{
+                sValue = Math.max(sValue,e);
+            });
+            maxArray.push(sValue);
+        })
+        console.log(maxArray);
+        return maxArray;
+    }
+
+    minVal(resultantArray){
+        let minArray = [];
+        resultantArray.map((d)=>{
+            let sValue = Infinity;
+            d.map((e)=>{
+                sValue = Math.min(sValue,e);
+            });
+            minArray.push(sValue);
+        })
+        console.log(minArray);
+        return minArray;
+    }
+    
+    
+    
+
 
     calculateAndShowStats() {
         const selectedValues = [];
@@ -1470,48 +1789,104 @@ getCumulativeHeightTillRow(startRow){
         input.style.width = `${width-5}px`;
         input.style.height = `${this.sampleData[rowIndex].height-5}px`; // Assuming you have a defined cell height
         input.style.zIndex = '3'; // Ensure it appears above the canvas
-    
-        // Add event listeners to handle input interactions
-        input.addEventListener('blur', (event) => {
-                this.sampleData[rowIndex][cellKey] = input.value;
 
-                this.editData(this.sampleData[rowIndex])
-                input.style.display = "none";
-           
-        });
-    
         input.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
-                    this.sampleData[rowIndex][cellKey] = input.value;
-                    this.editData(this.sampleData[rowIndex])
-                    input.style.display = "none";
-            
+                event.preventDefault();
+                
+                input.style.display = "none";
                
             }
+            
         });
-    
+
+        // Add event listeners to handle input interactions
+        input.addEventListener('blur', (event) => {
+            event.preventDefault();
+            let prevValue = this.sampleData[rowIndex][cellKey];
+            // alert(typeof(prevValue))
+            // alert(prevValue)
+            // alert(input.value)
+            let updateInputValue = input.value;
+            if(this.validate[cellKey] === "number"){
+                 updateInputValue = Number(input.value)
+            }
+            // convert in date format in db and then check
+            // alert(prevValue)
+            // alert(updateInputValue)
+            if(prevValue !== updateInputValue){
+                this.sampleData[rowIndex][cellKey] = input.value;
+                this.editData(this.sampleData[rowIndex],rowIndex,cellKey,input.value,prevValue)
+            }
+                input.style.display = "none";
+            
+                // return;
+        });
         document.body.appendChild(input);
     
         input.focus();
     }
 
-    async editData(data) {
-        // console.log(typeof(data.emailId))
-        // console.log(typeof(data.))
-        // return;
+    // chcek it later
+    async updateData(){
+        try {
+            const data = await this.getData(this.batchStart);
+            let dummyData = [{
+                id:"Id",
+                emailId:"EmailId",
+                name:"Name",
+                country:"Country",
+                state:"State",
+                city:"City",
+                telephoneNumber:"TelephoneNumber",
+                addressLine1:"AddressLine1",
+                addressLine2:"AddressLine2",
+                dateOfBirth:"DateOfBirth",
+                fY2019_20:"FY2019_20",
+                fY2020_21:"FY2020_21",
+                fY2021_22:"FY2021_22",
+                fY2022_23:"FY2022_23",
+                fY2023_24:"FY2023_24",
+                height:30,
+                minHeight:10,
+                maxHeight:60
+            }];
+            if (data.length > 0) {
+                data.forEach((d) => {
+                    dummyData.push({
+                        ...d,
+                        height: 30,
+                        minHeight: 10,
+                        maxHeight: 60
+                    });
+                });
+            } else {
+                this.addRows();
+            }
+            this.sampleData = dummyData;
+            this.updateCanvasSizes();
+            this.drawTable(this.headers,this.visibleArea)
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        } finally {
+            this.isLoading = false; // Reset loading flag
+        }
+    }
+
+    async editData(data,rowIndex,cellKey,inputVal,prevValue) {
         try {
             await axios.post("http://localhost:5103/api/check/update", data);
-            // Uncomment the next line if you want to show a success alert
-            
-            
-            alert("Success");
+            alert(`Successfully Edited ${cellKey}`);
+            this.sampleData[rowIndex][cellKey] = inputVal;
             this.drawTable(this.headers,this.visibleArea);
         } catch (error) {
             alert('Error Occurred.\nPossible reasons:\n1. Added Wrong Email Format\n2. Added Wrong Telephone Number Format\n3. Added Empty Value');
             console.log(error);
+            this.sampleData[rowIndex][cellKey] = prevValue;
             this.drawTable(this.headers,this.visibleArea);
         }
     }
+
 
     
     
