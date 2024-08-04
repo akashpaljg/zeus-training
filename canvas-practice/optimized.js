@@ -299,6 +299,9 @@ class CanvasTable {
         // data canvas handleClick
         this.dataCanvas.addEventListener("dblclick", this.handleDbClick.bind(this));
 
+        // handle Right Click
+        this.dataCanvas.addEventListener("contextmenu",this.handleRightClick.bind(this));
+
         // data canvas multiselect
         this.dataCanvas.addEventListener("mousedown",this.handleDataDown.bind(this));
         this.dataCanvas.addEventListener("mousemove",this.handleDataMove.bind(this));
@@ -427,11 +430,64 @@ class CanvasTable {
         this.graphO.addEventListener("change",this.handleGraphOChange.bind(this));
 
         this.initializeChildContainer();
+        this.initializeContextMenu();
+
+        this.deleteState = {
+            rowIndex:-1
+        }
 
         this.updateCanvasSizes();
+
         this.drawTable(headers,this.visibleArea); 
     }
 
+    initializeContextMenu() {
+        // Create the <li> element for the context menu item
+        this.contextMenuList = document.createElement('li');
+        this.contextMenuList.style.listStyle = "none";
+        this.contextMenuList.style.display = "flex";
+        this.contextMenuList.style.alignItems = "center";
+        this.contextMenuList.style.justifyContent = "center";
+        this.contextMenuList.style.padding = "0.5rem";
+        this.contextMenuList.style.cursor = "pointer";
+    
+        // Create the icon element
+        const icon = document.createElement('i');
+        icon.className = "fa-solid fa-trash";
+        icon.style.marginRight = "0.5rem";
+    
+        // Create a text node for "Delete Row"
+        const textNode = document.createTextNode('Delete Row');
+    
+        // Append the icon and text to the <li> element
+        this.contextMenuList.appendChild(icon);
+        this.contextMenuList.appendChild(textNode);
+
+        this.contextMenuList.addEventListener("click",this.handleDelete.bind(this));
+    
+        // Create the <ul> element for the context menu
+        this.contextMenu = document.createElement('ul');
+        this.contextMenu.id = "contextId";
+        this.contextMenu.style.backgroundColor = "white";
+        this.contextMenu.style.width = "8rem"; // Increased width to accommodate icon
+        this.contextMenu.style.height = "2.7rem";
+        this.contextMenu.style.display = "flex";
+        this.contextMenu.style.justifyContent = "center";
+        this.contextMenu.style.alignItems = "center";
+        this.contextMenu.style.borderRadius = "0.7rem";
+        this.contextMenu.style.border = "1px solid black";
+        this.contextMenu.style.position = "absolute";
+        this.contextMenu.style.zIndex = '5';
+        this.contextMenu.style.display = "none";
+        this.contextMenu.style.padding = "0";
+        this.contextMenu.style.margin = "0";
+    
+        // Append the <li> element to the <ul> element
+        this.contextMenu.appendChild(this.contextMenuList);
+    
+        // Append the <ul> element to the child container
+        this.childContainer.appendChild(this.contextMenu);
+    }
     handleGraphOChange(event){
         // alert(event.target.value)
         this.graphState.graphOpt = event.target.value;
@@ -2141,6 +2197,36 @@ getVisibleArea(scrollX, scrollY) {
     
         // Redraw the table with the new column
         this.updateCanvasSizes();
+    }
+
+    // handle Right Click
+    handleRightClick(event){
+        event.preventDefault();
+        const rect = this.dataCanvas.getBoundingClientRect();
+        let widthTillCol = this.getCumulativeWidthTillColumn(this.visibleArea.startCol);
+        let heightTillRow = this.getCumulativeHeightTillRow(this.visibleArea.startRow);
+        let width = (this.visibleArea.startCol) < 0 ? 0: widthTillCol;
+        const x = (event.clientX - rect.left ) + width;
+        let height = this.visibleArea.startRow < 0 ? 0 :heightTillRow ;
+        const y = (event.clientY - rect.top) + height;
+
+        console.log(`X : ${x} Y: ${y}`)
+
+        const colIndex = this.getPositionX(x);
+        const rowIndex = this.getPositionY(y);
+
+        this.deleteState.rowIndex = rowIndex;
+
+
+        this.contextMenu.style.display = "block";
+        this.contextMenu.style.top = `${y-45}px`;
+        this.contextMenu.style.left = `${x-150}px`;
+        
+        // alert(rowIndex);
+    }
+    handleDelete(event){
+        // console.log(this.sampleData[this.deleteState.rowIndex]);
+        alert(this.deleteState.rowIndex);
     }
     
     handleDbClick(event) {
