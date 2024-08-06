@@ -1,4 +1,32 @@
 class LineDrawer{
+    /**
+     * @typedef {Object} Header
+     * @property {string} data
+     * @property {number} [width]
+     * @property {number} [minWidth]
+     * @property {number} [maxWidth]
+     */
+
+    /**
+     * @typedef {Object} VisibleArea
+     * @property {number} startRow
+     * @property {number} endRow
+     * @property {number} startCol
+     * @property {number} endCol
+     */
+
+    /**
+     * @typedef {Object} SampleData
+     * @property {number} [height]
+     */
+
+
+    /**
+     * 
+     * @param {number} cellWidth This is the width of the each cell
+     * @param {number} cellHeight This is the height of the each cell
+     */
+
     constructor(cellWidth,cellHeight){
         // this.context = context;
         this.cellWidth = cellWidth;
@@ -13,6 +41,8 @@ class LineDrawer{
         this.container = document.getElementById('canvasContainer');
 
         console.log(this.headers)
+        
+
         this.headerss =  [
             {data:"#"},
             {data:"A"},
@@ -52,10 +82,12 @@ class LineDrawer{
         this.updateCanvasSizes();
     }
 
+    /**
+     * @returns {void}
+     */
+
     updateCanvasSizes() {
         const totalWidth = this.headers.reduce((sum, header) => sum + header.width, 0);
-
-        
 
         this.childContainer.style.width = `${totalWidth}px`;
         this.childContainer.style.height = `${this.container.clientHeight+this.headerHeight*5}px`;
@@ -73,6 +105,14 @@ class LineDrawer{
         this.rowCanvas.height = this.container.clientHeight;
     }
 
+    /**
+     * @param {number} x1 This is about the horizontal line
+     * @param {number} y1 This is about the horizontal line
+     * @param {number} x2 This is about the vertical line
+     * @param {number} y2 This is about the vertical line
+     * @param {CanvasRenderingContext2D} c This is the Canvas Rendering Context 2D
+     */
+
      drawLine(x1, y1, x2, y2, c) {
         c.beginPath();
         c.lineWidth = 1;
@@ -84,8 +124,14 @@ class LineDrawer{
         // Stroke the line
         c.stroke();
     }
-    
 
+    /**
+     * 
+     * @param {number} rows This is the number of rows of the header cell
+     * @param {number} cols This is the number of cols of the header cell
+     * @param {object} headerss This is about the headerss
+     * @param {VisibleArea} visibleArea This is the VisibleArea, from where the data for the table to be drawn
+     */
 
     drawHeaders(rows,cols,headerss,visibleArea){
         console.log(`Headers : ${headerss[0]?.width}`);
@@ -103,7 +149,14 @@ class LineDrawer{
            
         }
     
-
+        /**
+         * 
+         * @param {number} rows This is the number of rows of dataCanvas
+         * @param {number} cols This is the number of cols of the dataCanvas
+         * @param {Header[]} headerss This is the headerss, which contains the info about width
+         * @param {SampleData[]} sampleDatas This is the sampleData, which contains the info about height
+         * @param {VisibleArea} visibleArea This is the visibleArea, which helps to dynamically change the width and height based on current visible rows and cols
+         */
     drawData(rows, cols, headerss,sampleDatas,visibleArea) {
         console.log(`Data : ${sampleDatas.length}`);
         this.cData.lineWidth = 0.5;  // Set line width to 1
@@ -133,6 +186,14 @@ class LineDrawer{
             y+= sampleDatas[r].height ? sampleDatas[r].height : 30;
         }
     }
+     /**
+         * 
+         * @param {number} rows This is the number of rows of rowCanvas
+         * @param {number} cols This is the number of cols of the rowCanvas
+         * @param {Header[]} headerss This is the headerss, which contains the info about width
+         * @param {SampleData[]} sampleDatas This is the sampleData, which contains the info about height
+         * @param {VisibleArea} visibleArea This is the visibleArea, which helps to dynamically change the width and height based on current visible rows and cols
+         */
 
     drawRow(rows, cols,headerss,sampleDatas,visibleArea) {
        
@@ -160,27 +221,47 @@ class LineDrawer{
     }
 
 
+    /**
+     * 
+     * @param {Header[]} headerss This is the headerss, which contains the info about width
+     * @param {VisibleArea} visibleArea This is the visibleArea, which helps to dynamically change the width and height based on current visible rows and cols
+     */
     drawH(headerss,visibleArea){
         
             this.drawHeaders(1,50,headerss,visibleArea);
         
     }
+
+    /**
+     * 
+     * @param {Header[]} headerss This is the headerss, which contains the info about width
+     * @param {SampleData[]} sampleDatas  This is the sampleData, which contains the info about height
+     * @param {VisibleArea} visibleArea This is the visibleArea, which helps to dynamically change the width and height based on current visible rows and cols
+     */
     drawR(headerss,sampleDatas,visibleArea){
             this.drawRow(50,1,headerss,sampleDatas,visibleArea)
     }
+    /**
+     * 
+     * @param {Header[]} headerss This is the headerss, which contains the info about width
+     * @param {SampleData[]} sampleDatas  This is the sampleData, which contains the info about height
+     * @param {VisibleArea} visibleArea This is the visibleArea, which helps to dynamically change the width and height based on current visible rows and cols
+     */
     drawD(headerss,sampleDatas,visibleArea){
         
             this.drawData(50,50,headerss,sampleDatas,visibleArea);
         
     }
 
+    /**
+     * 
+     * @param {Header[]} headerss This is the headerss, which contains the info about width
+     * @param {SampleData[]} sampleDatas  This is the sampleData, which contains the info about height
+     * @param {VisibleArea} visibleArea This is the visibleArea, which helps to dynamically change the width and height based on current visible rows and cols
+     */
     drawExcel(headerss,sampleDatas,visibleArea){
-        console.log('Excel')
-        // this.cHeader.clearRect(0,0,this.headerCanvas.clientWidth,this.headerCanvas.clientHeight);
-        // this.cData.clearRect(0,0,this.dataCanvas.clientWidth,this.dataCanvas.clientHeight)
-        // this.cRow.clearRect(0,0,this.rowCanvas.clientWidth,this.rowCanvas.clientHeight)
         window.requestAnimationFrame(()=>{
-            // console.log('header')
+            console.log('header')
             this.drawH(headerss,visibleArea);
             console.log('data')
             this.drawD(headerss,sampleDatas,visibleArea);
@@ -191,8 +272,17 @@ class LineDrawer{
     }
 }
 
-
 class TableCell {
+    /**
+     * 
+     * @param {number} x This is the x poition of the data
+     * @param {number} y This is the x poition of the data
+     * @param {number} width This is the width of data
+     * @param {number} height This is the height of the data
+     * @param {string} text This is text that should be drawn
+     * @param {boolean} isHeader This is the boolean wheather this is the header or not, based on thta styles will be applied
+     * @param {string} color This is the color of the cell, if any color is assigned then it will fill color
+     */
     constructor(x, y, width, height, text, isHeader = false, color = "lightgray") {
         this.x = x;
         this.y = y;
@@ -203,6 +293,13 @@ class TableCell {
         this.color = color;
     }
 
+    /**
+     * 
+     * @param {CanvasRenderingContext2D} ctx This is the Canvas Rendering Context to measure the width of cell
+     * @param {string} text This is the text that is written in that cell
+     * @param {number} maxWidth This is the maxWidth till the text should be wrapped
+     * @returns {string[]}
+     */
     static getLines(ctx, text, maxWidth) {
         let lines = [];
         let currentLine = '';
@@ -225,7 +322,11 @@ class TableCell {
 
         return lines;
     }
-
+    /**
+     * 
+     * @param {CanvasRenderingContext2D} c This is the Canvas Rendering Context
+     * @param {string} color This is the color that should be filled in the Canvas
+     */
     draw(c, color = null) {
         c.clearRect(this.x, this.y, this.width, this.height);
     
@@ -247,6 +348,45 @@ class TableCell {
 }    
 
 class CanvasTable {
+
+     /**
+     * @typedef {Object} Header
+     * @property {string} data
+     * @property {number} [width]
+     * @property {number} [minWidth]
+     * @property {number} [maxWidth]
+     */
+
+     /**
+     * @typedef {Object} SampleData
+     * @property {string} id
+     * @property {string} emailId
+     * @property {string} name
+     * @property {string} country
+     * @property {string} state
+     * @property {string} city
+     * @property {string} telephoneNumber
+     * @property {string} addressLine1
+     * @property {string?} addressLine2
+     * @property {string} dateOfBirth
+     * @property {string} fY2019_20
+     * @property {string} fY2020_21
+     * @property {string} fY2021_22
+     * @property {string} fY2022_23
+     * @property {string} fY2023_24
+     * @property {number} height
+     * @property {number} minHeight
+     * @property {number} maxHeight
+     */
+
+    /**
+     * 
+     * @param {string} containerId This is the container Id for the HTML Canvas
+     * @param {Header[]} headers This is the headerss, which contains the info about width
+     * @param {string[]} dataHeaders This is the dataHeaders, which contains the info about headers
+     * @param {SampleData[]} sampleData  This is the sampleData, which contains the info about data and height
+     */
+
     constructor(containerId, headers,dataHeaders, sampleData) {
         this.container = document.getElementById(containerId);
         this.submitFile = document.getElementById('uploadFileForm');
@@ -259,7 +399,6 @@ class CanvasTable {
         // Batches
         this.batchStart = 0;
         
-    
         this.uid = this.generateUUID();
         this.rowNumberCanvas = document.getElementById('rowNumbersCanvas');
         this.dataCanvas = document.getElementById('dataCanvas');
@@ -320,17 +459,6 @@ class CanvasTable {
         this.rowNumberCanvas.addEventListener("mouseup",this.handleRowMouseUp.bind(this));
         this.sort.addEventListener("change",this.handleSorting.bind(this));
 
-        
-
-     
-
-        
-
-        // drag and drop
-        // this.headerCanvas.addEventListener("mousedown", this.handleDragStart.bind(this));
-        // document.addEventListener("mousemove", this.handleDragMove.bind(this));
-        // document.addEventListener("mouseup", this.handleDragEnd.bind(this));
-        
 
         this.cellHeight = 30;
         this.headerHeight = 30;
@@ -352,9 +480,6 @@ class CanvasTable {
         }));
         
         console.log(this.sampleData);
-        
-
-
 
         this.multiSelectState = {
             isSelecting: false,
@@ -401,17 +526,6 @@ class CanvasTable {
             endCol:Math.ceil(this.container.clientWidth/this.headers[0].width)
         }
 
-        // Graph Related
-        // this.ctxParent = document.createElement("div");
-        // this.ctxParent.style.position = "absolute"
-        // this.ctxParent.style.zIndex = "5";
-        // this.ctxParent.style.top = "5px";
-
-        // this.ctx = document.createElement("canvas");
-        // this.ctx.id = 'myChart';
-        // this.ctx.style.display = "none";
-        // this.ctxParent.appendChild(this.ctx);
-        // document.getElementsByClassName('sort-find')[0].appendChild(this.ctxParent);
         this.createDraggableCanvas();
         this.graphState = {
             type:"sum",
@@ -433,6 +547,7 @@ class CanvasTable {
         this.initializeContextMenu();
 
         this.deleteState = {
+            visible:false,
             rowIndex:-1
         }
 
@@ -440,6 +555,10 @@ class CanvasTable {
 
         this.drawTable(headers,this.visibleArea); 
     }
+
+    /**
+     * It is used to initialize teh context Menu when the user will right click
+     */
 
     initializeContextMenu() {
         // Create the <li> element for the context menu item
@@ -488,12 +607,21 @@ class CanvasTable {
         // Append the <ul> element to the child container
         this.childContainer.appendChild(this.contextMenu);
     }
+
+    /**
+     * 
+     * @param {Event} event This is used to grab the change to accordingly show the graph
+     */
     handleGraphOChange(event){
         // alert(event.target.value)
         this.graphState.graphOpt = event.target.value;
         this.graphDraw();
     }
 
+    /**
+     * It is used to draw the graph according to the data that is selected
+     * @returns {void}
+     */
     graphDraw(){
 
         if(this.multiSelectState.data.size <= 0){
@@ -567,13 +695,19 @@ class CanvasTable {
         this.calculateAndShowStats();
     }
 
+    /**
+     * Based on the change it is used to redraw the graph
+     * @param {Event} event 
+     */
     handleGraphChange(event){
         this.graphState.type = event.target.value;
 
        this.graphDraw();
         // console.log(event.target.value);
     }
-
+    /**
+     * it is used to change the position of the graph, according to the user mouse position
+     */
     createDraggableCanvas() {
         this.ctxParent = document.createElement("div");
         this.ctxParent.style.position = "absolute";
@@ -595,6 +729,11 @@ class CanvasTable {
         this.ctxParent.onmousedown = this.dragMouseDown.bind(this);
     }
 
+    /**
+     * This will get the current mouse position on mouse down
+     * @param {Event} e 
+     */
+
     dragMouseDown(e) {
         e.preventDefault();
         // Get the mouse cursor position at startup:
@@ -605,6 +744,10 @@ class CanvasTable {
         this.ctxParent.onmousemove = this.elementDrag.bind(this);
     }
 
+    /**
+     * 
+     * @param {Event} e This fwill run during the change of position of the graph
+     */
     elementDrag(e) {
         e.preventDefault();
         // Calculate the new cursor position:
@@ -617,6 +760,9 @@ class CanvasTable {
         this.ctxParent.style.left = (this.ctxParent.offsetLeft - this.pos1) + "px";
     }
 
+    /**
+     * This will run when the user will stop moving the graph
+     */
     closeDragElement() {
         // Stop moving when mouse button is released:
         this.ctxParent.onmouseup = null;
@@ -624,17 +770,29 @@ class CanvasTable {
         onmousemove = null;
     }
 
-
+    /**
+     * This function will toggle the display of the graph
+     * @param {Event} event 
+     */
     handleGraphClick(event) {
         // alert('Clicked');
         this.ctxParent.style.display = this.graphState.hidden ? "block" : "none";
         this.graphState.hidden = !this.graphState.hidden;
 
     }
-    
+
+    /**
+     * This will initialize the childContainer
+     */
     initializeChildContainer(){
         this.childContainer = document.getElementById('childContainer');
     }
+
+    /**
+     * This will get the correct rowCount
+     * @param {number} index The index till which we need to calculate the row count
+     * @returns {number}
+     */
     getRowCount(index){
         let x = this.headerHeight;
         for(let i=1;i<this.sampleData.length;i++){
@@ -645,6 +803,12 @@ class CanvasTable {
         }
         return -1;
     }
+
+    /**
+     * This will get the correct rowCount
+     * @param {number} index The index till which we need to calculate the row count
+     * @returns {number}
+     */
 
     getColumnCount(index){
         let x = this.headers[0].width;
@@ -658,6 +822,10 @@ class CanvasTable {
     }
 
 
+    /**
+     * This will generateUUID
+     * @returns {string}
+     */
     generateUUID() { // Public Domain/MIT
         var d = new Date().getTime();//Timestamp
         var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
@@ -674,6 +842,11 @@ class CanvasTable {
         });
     }
 
+    /**
+     * This function will give the current status and progress of file uploading
+     * @param {string} fid This is the unique file Id
+     * @param {Event} event 
+     */
     Polling(fid,event) {
         const formData = new FormData();
         formData.append("uid", this.uid);
@@ -706,7 +879,11 @@ class CanvasTable {
 
     }
     
-    
+    /**
+     * This function will handle the file Submit
+     * @param {Event} event 
+     * @returns {Promise<void>}
+     */
     async handleSubmitFile(event){
        
         event.preventDefault();
@@ -742,6 +919,11 @@ class CanvasTable {
     }
     }
 
+    /**
+     * This function will handle the search 
+     * @param {Event} event 
+     * @returns {Promise<void>}
+     */
     async handleSearch(event){
        
         event.preventDefault();
@@ -810,6 +992,11 @@ class CanvasTable {
         }
     }
 
+    /**
+     * This function will handle the sorting
+     * @param {Event} event 
+     * @returns {Promise<void>}
+     */
     async handleSorting(event) {
         try {
             console.log(event.target.value);
@@ -892,81 +1079,11 @@ class CanvasTable {
         }
     }
     
-    // Add a method to clear the canvas
-    // clearCanvas() {
-    //     const ctx = this.canvas.getContext('2d');
-    //     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    // }
-    
 
-    // async handleSorting(event){
-    //     event.preventDefault();
-    //     console.log(event.target.query.value);
-    //     const query = event.target.query.value;
-    //     // return;
-     
-    //     try{
-    //         console.log("Searching");
-    //         let res = await fetch(`http://localhost:5103/api/check/sort/${query}`);
-    //         const response = await res.json();
-    //         console.log(response);
-
-    //         let searchedData = [{
-    //             id:"Id",
-    //             emailId:"EmailId",
-    //             name:"Name",
-    //             country:"Country",
-    //             state:"State",
-    //             city:"City",
-    //             telephoneNumber:"TelephoneNumber",
-    //             addressLine1:"AddressLine1",
-    //             addressLine2:"AddressLine2",
-    //             dateOfBirth:"DateOfBirth",
-    //             fY2019_20:"FY2019_20",
-    //             fY2020_21:"FY2020_21",
-    //             fY2021_22:"FY2021_22",
-    //             fY2022_23:"FY2022_23",
-    //             fY2023_24:"FY2023_24",
-    //             height:30,minHeight:10,maxHeight:60
-    //         }];
-
-    //         if (response.data.length > 0) {
-    //             response.data.map((d)=>{
-    //                 searchedData.push(
-    //                     {
-    //                         ...d,
-    //                         height:30,minHeight:10,maxHeight:60
-    //                     }
-    //                 )
-    //             })
-    //         } else {
-    //             this.addRows();
-    //             return;
-    //         }
-
-    //         this.sampleData = searchedData;
-    //         console.log(this.sampleData)
-    //         this.addRows();
-    //         console.log("I'm above updating canvas size")
-    //         this.updateCanvasSizes(0);
-    //         console.log("I'm drawing table")
-    //         this.visibleArea = {
-    //             startRow : 0,
-    //             endRow:Math.ceil(this.container.clientHeight/this.headerHeight),
-    //             startCol:0,
-    //             endCol:Math.ceil(this.container.clientWidth/this.headers[0].width)
-    //         }
-    //         this.drawTable(this.headers,this.visibleArea);
-    //         console.log("Huu Done")
-
-    //     }catch(error){
-    //         console.error(error);
-    //     }finally{
-    //         console.log("searched")
-    //     }
-    // }
-
-   
+   /**
+    * This function will initialize multiSelectState, when user will click of dataCanvas
+    * @param {Event} event 
+    */
     handleDataDown(event) {
         const rect = this.dataCanvas.getBoundingClientRect();
         // alert(this.visibleArea.startCol)
@@ -1010,7 +1127,10 @@ class CanvasTable {
     }
     
 
-    
+    /**
+     * This function will dynamically update the multiSelectState, when user will move on dataCanvas
+     * @param {Event} event 
+     */
     handleDataMove(event) {
         if (this.multiSelectState.isSelecting) {
 
@@ -1049,6 +1169,10 @@ class CanvasTable {
         }
     }
 
+    /**
+     * This function will run when the user will release the mouse
+     * @returns {void} 
+     */
     handleDataUp() {
         this.multiSelectState.isSelecting = false;
 
@@ -1119,6 +1243,10 @@ class CanvasTable {
         this.calculateAndShowStats();
     }
 
+    /**
+     * This will perform the calculations related to the Graph
+     * @returns {number[][]}
+     */
     calculationsGraph() {
         let selectedCols = new Map(); // Using a Map to store values by column
     
@@ -1148,6 +1276,13 @@ class CanvasTable {
         return selectedColsArray;
     }
 
+    /**
+     * This will do the sum of the values of the same column,
+     * example [[10,20],[20,40]] result will be [30,60]
+     * @param {number[][]} resultantArray 
+     * @returns {number[]}
+     */
+
     sumVal(resultantArray) {
         let sumArray = [];
         resultantArray.forEach(d => {
@@ -1158,6 +1293,11 @@ class CanvasTable {
         return sumArray;
     }
 
+    /**
+     * This function will take the average, refer sumVal function for example
+     * @param {number[][]} resultantArray 
+     * @returns {number[]}
+     */
     avgVal(resultantArray) {
         let avgArray = [];
         resultantArray.forEach(d => {
@@ -1173,6 +1313,11 @@ class CanvasTable {
         return avgArray;
     }
 
+    /**
+     * This function will take the max value, refer sumVal function for example
+     * @param {number[][]} resultantArray 
+     * @returns {number[]}
+     */
     maxVal(resultantArray){
         let maxArray = [];
         resultantArray.map((d)=>{
@@ -1186,6 +1331,12 @@ class CanvasTable {
         return maxArray;
     }
 
+    /**
+     * This function will take the min value, refer sumVal function for example
+     * @param {number[][]} resultantArray 
+     * @returns {number[]}
+     */
+
     minVal(resultantArray){
         let minArray = [];
         resultantArray.map((d)=>{
@@ -1198,11 +1349,10 @@ class CanvasTable {
         console.log(minArray);
         return minArray;
     }
-    
-    
-    
 
-
+    /**
+     * This function will perform the calculations on the multiSelectState data and show the result
+     */
     calculateAndShowStats() {
         const selectedValues = [];
         this.multiSelectState.data.forEach(cellKey => {
@@ -1245,12 +1395,22 @@ class CanvasTable {
         }
     }
 
+    /**
+     * This fucntion will calculate median, refer sumVal for example
+     * @param {number[]} arr 
+     * @returns {number}
+     */
     calculateMedian(arr) {
         const sorted = arr.slice().sort((a, b) => a - b);
         const mid = Math.floor(sorted.length / 2);
         return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
     }
 
+    /**
+     * This fucntion will calculate mode, refer sumVal for example
+     * @param {number[]} arr 
+     * @returns {number}
+     */
     calculateMode(arr) {
         const freqMap = {};
         arr.forEach(val => {
@@ -1260,7 +1420,11 @@ class CanvasTable {
         return arr.filter(val => freqMap[val] === maxFreq)[0];
     }
 
-
+    /**
+     * This function will perform the toggle of cell selection, when the user will select the selected cell then it will unselect this
+     * @param {number} row 
+     * @param {number} col 
+     */
     toggleCellSelection(row, col) {
         const key = `${row}|${col}`;
         if (this.multiSelectState.data.has(key)) {
@@ -1269,6 +1433,10 @@ class CanvasTable {
             this.multiSelectState.data.add(key);
         }
     }
+
+    /**
+     * This function will update the cell selection based on mouse move on dataCanavs
+     */
 
      updateSelection() {
         this.multiSelectState.data.clear();
@@ -1289,6 +1457,11 @@ class CanvasTable {
         }
     }
 
+    /**
+     * This function will give the correct x position
+     * @param {number} x 
+     * @returns {number}
+     */
     getPositionX(x){
         let cumulativeWidth = this.headers[0].width;
         for(let i=1;i<this.headers.length;i++){
@@ -1300,6 +1473,11 @@ class CanvasTable {
         return -1;
     }
 
+      /**
+     *  This function will give the correct y position
+     * @param {number} y
+     * @returns {number}
+     */
     getPositionY(y){
         let cumulativeHeight = this.headerHeight;
         for(let i=0;i<this.sampleData.length;i++){
@@ -1313,140 +1491,29 @@ class CanvasTable {
         return -1;
     }
 
-    handleDragStart(event) {
-        // alert("handle drag start");
-        const rect = this.headerCanvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        
-        const columnIndex = this.getPositionX(x);
-
-        if (columnIndex >= 0) {
-            this.dragState = {
-                isDragging: true,
-                columnIndex: columnIndex,
-                startX: event.clientX,
-                currentX: event.clientX
-            };
-        
-            
-            if(!this.resizeState.isResizing){
-                this.headerCanvas.style.cursor = "grabbing";
-                this.createDraggedColumnImage(columnIndex);
-            }
-                   
-        }
-    }
-
-    handleDragMove(event) {
-        if (!this.resizeState.isResizing &&this.dragState.isDragging) {
-            this.dragState.currentX = event.clientX;
-            this.updateDraggedColumnPosition();
-            this.drawHeader();
-        }
-    }
-
-    handleDragEnd(event) {
-        if (!this.resizeState.isResizing && this.dragState.isDragging) {
-            const targetColumnIndex = this.getTargetColumnIndex(event.clientX);
-            if (targetColumnIndex !== -1 && targetColumnIndex !== this.dragState.columnIndex) {
-                this.swapColumns(this.dragState.columnIndex, targetColumnIndex);
-            }
-            this.removeDraggedColumnImage();
-            this.dragState.isDragging = false;
-            this.headerCanvas.style.cursor = "default";
-            this.drawTable(this.headers);
-            // this.drawData();
-        }
-    }
-
-    createDraggedColumnImage(columnIndex) {
-        const draggedColumn = document.createElement('canvas');
-        draggedColumn.id = 'draggedColumn';
-        draggedColumn.width = this.headers[columnIndex].width;
-        draggedColumn.height = this.headerCanvas.height + this.dataCanvas.height;
-        draggedColumn.style.position = 'absolute';
-        draggedColumn.style.top='0';
-        draggedColumn.style.left=`${this.headers[0].width}`
-        draggedColumn.style.zIndex = '4';
-        draggedColumn.style.pointerEvents = 'none';
-        draggedColumn.style.opacity = '0.5';
-
-        const ctx = draggedColumn.getContext('2d');
-
-        // Draw header
-        new TableCell(0, 0, this.headers[columnIndex].width, this.headerHeight, this.headers[columnIndex].data, true).draw(ctx);
-
-        // Draw data
-        this.sampleData.forEach((rowData, rowIndex) => {
-            new TableCell(0, this.headerHeight + rowIndex * this.cellHeight, this.headers[columnIndex].width, this.cellHeight, rowData[this.headers[columnIndex].data]).draw(ctx);
-        });
-
-        document.body.appendChild(draggedColumn);
-    }
-
-    updateDraggedColumnPosition() {
-        const draggedColumn = document.getElementById('draggedColumn');
-        if (draggedColumn) {
-            const dx = this.dragState.currentX - this.dragState.startX;
-            if(dx<0){
-                dx = 0
-            }
-            draggedColumn.style.transform = `translate(${dx}px, 0)`;
-        }
-    }
-
-    removeDraggedColumnImage() {
-        const draggedColumn = document.getElementById('draggedColumn');
-        if (draggedColumn) {
-            draggedColumn.remove();
-        }
-    }
-
-    getTargetColumnIndex(x) {
-        const rect = this.headerCanvas.getBoundingClientRect();
-        const relativeX = x - rect.left;
-        let cumulativeWidth = this.headers[0].width;
-
-        for (let i = 1; i < this.headers.length; i++) {
-            if (relativeX < cumulativeWidth + this.headers[i].width) {
-                return i;
-            }
-            cumulativeWidth += this.headers[i].width;
-        }
-
-        return this.headers.length - 1;
-    }
-
-    swapColumns(fromIndex, toIndex) {
-        // alert(`${fromIndex} ${toIndex}`)
-         // Swap headers
-    const tempHeader = this.headers[fromIndex];
-    this.headers.splice(fromIndex, 1);
-    this.headers.splice(toIndex, 0, tempHeader);
-
-    // Swap dataHeaders
-    const tempDataHeader = this.dataHeaders[fromIndex - 1]; // -1 because dataHeaders doesn't include the '#' column
-    this.dataHeaders.splice(fromIndex - 1, 1);
-    this.dataHeaders.splice(toIndex - 1, 0, tempDataHeader);
-
-    // Swap data
-    this.sampleData = this.sampleData.map(row => {
-        const entries = Object.entries(row);
-        const temp = entries[fromIndex];
-        entries.splice(fromIndex, 1);
-        entries.splice(toIndex, 0, temp);
-        return Object.fromEntries(entries);
-    });
-    }
-
+    /**
+     * Calculates the cumulative width of headers up to a given index.
+     * 
+     * @param {number} index - The index up to which the cumulative width is calculated.
+     * @returns {number} The cumulative width of the headers.
+     */
     getCumulativeWidth(index) {
         return this.headers.slice(0, index).reduce((sum, header) => sum + header.width, 0);
     }
 
+    /**
+     * Calculates the cumulative height of data up to a given index.
+     * @param {number} index 
+     * @returns {number}
+     */
     getCumulativeHeight(index){
         return this.sampleData.slice(0, index).reduce((sum, header) => sum + header.height, 0);
     }
 
+    /**
+     * This will update the Canvas Size dynamically, based on user interactions
+     * @param {number} scrollTop 
+     */
     updateCanvasSizes(scrollTop = null) {
         const totalWidth = this.headers.reduce((sum, header) => sum + header.width, 0);
         const totalHeight = this.headerHeight + this.sampleData.reduce((sum,data)=>sum+data.height,30);
@@ -1465,6 +1532,12 @@ class CanvasTable {
         this.dataCanvas.height = this.container.clientHeight+this.headerHeight;
     }
 
+    /**
+     * This function will handle the data and line Drawings
+     * @param {Header[]} headers 
+     * @param {VisibleArea} visibleArea 
+     */
+
     drawTable(headers,visibleArea) {
         console.log(`Visible Rows: ${visibleArea.startRow}`)
         window.requestAnimationFrame(() => {
@@ -1474,7 +1547,11 @@ class CanvasTable {
         });
         this.lineDraw.drawExcel(headers,this.sampleData,this.visibleArea);
     }
-  
+
+    /**
+     * This function focuses on column resizing
+     * @param {Event} event 
+     */
     handleMouseDown(event) {
         const rect = this.headerCanvas.getBoundingClientRect();
         const width = this.getCumulativeWidthTillColumn(this.visibleArea.startCol);
@@ -1490,7 +1567,10 @@ class CanvasTable {
             };
         }
     }
-
+    /**
+     * This function focuses on row resizing
+     * @param {Event} event 
+     */
     handleRowMouseDown(event) {
         const rect = this.rowNumberCanvas.getBoundingClientRect();
         let height = 0;
@@ -1516,7 +1596,10 @@ class CanvasTable {
             };
         }
     }
-
+    /**
+     * This function focuses on column resizing on mouse move to dynamically update the column size
+     * @param {Event} event 
+     */
     handleMouseMove(event) {
         console.log(`Visible Area; ${this.visibleArea.startRow}`)
         if (this.resizeState.isResizing) {
@@ -1547,7 +1630,10 @@ class CanvasTable {
         }
     }
 
-    
+    /**
+     * This function focuses on row resizing on mouse move to dynamically update the row size
+     * @param {Event} event 
+     */
 handleRowMouseMove(event) {
     if (this.rowResizeState.isResizing) {
         const currentScrollTop = this.container.scrollTop;
@@ -1593,7 +1679,11 @@ handleRowMouseMove(event) {
         this.rowNumberCanvas.style.cursor = rowIndex !== -1 ? 'row-resize' : 'default';
     }
 }
-
+/**
+ * This will get the cumulativeWidth till particular column
+ * @param {number} startCol It is the visibleArea start col
+ * @returns {number}
+ */
 getCumulativeWidthTillColumn(startCol){
     let width = 0;
     for(let i=1;i<=startCol;i++){
@@ -1602,7 +1692,11 @@ getCumulativeWidthTillColumn(startCol){
     return width;
 }
 
-
+/**
+ * This will get the cumulativeHeight till particular column
+ * @param {number} startRow It is the visibleArea startRow
+ * @returns {number}
+ */
 getCumulativeHeightTillRow(startRow){
     let height = 0;
     for(let i=1;i<=startRow;i++){
@@ -1611,17 +1705,25 @@ getCumulativeHeightTillRow(startRow){
     return height;
 }
 
-
+/**
+ * This will handle the mouse up event on headerCanvas to stop column resizing
+ */
     handleMouseUp() {
         this.resizeState.isResizing = false;
         // alert("I'm gone")
     }
-
+    /**
+     * This will handle the mouse up event on rowCanvas to stop row resizing
+     */
     handleRowMouseUp(){
         this.rowResizeState.isResizing = false;
     }
 
-
+/**
+ * This function will return the column index of the clicked position
+ * @param {number} x it is the x positon of the mouse
+ * @returns {number}
+ */
     getColumnIndexAtX(x) {
         let currentX = 0;
         for (let i = 0; i < this.headers.length; i++) {
@@ -1633,6 +1735,12 @@ getCumulativeHeightTillRow(startRow){
         return -1;
     }
 
+/**
+ * This function will return the row index of the clicked position
+ * @param {number} y it is the x positon of the mouse
+ * @param {number} startRow it is the visibleArea startRow
+ * @returns {number}
+ */
     getColumnIndexAtY(y,startRow=null) {
         let currentY = 30; // Assuming the header row is 30px tall
         // let currentY = 0;
@@ -1651,11 +1759,20 @@ getCumulativeHeightTillRow(startRow){
         return -1;
     }
 
-    calculateCumulativeWidths(){
-            let sum = 0;
-            return this.headers.map(header => sum += header.width);
+    /**
+     * Calculates the cumulative widths of headers.
+     * 
+     * @returns {number[]} An array of cumulative widths of the headers.
+     */
+    calculateCumulativeWidths() {
+        let sum = 0;
+        return this.headers.map(header => sum += header.width);
     }
 
+    /**
+     * This is used to draw the row canvas
+     * @param {number} visibleArea It is the current visibleArea
+     */
     drawRowCanvas(visibleArea = null) {
         // Clear the row canvas before drawing
         this.cRow.clearRect(0, 0, this.rowNumberCanvas.width, this.rowNumberCanvas.height);
@@ -1705,7 +1822,10 @@ getCumulativeHeightTillRow(startRow){
         }
     }
     
-    
+    /**
+     * This is used to draw the header canvas
+     * @param {number} visibleArea It is the current visibleArea
+     */
     drawHeader(visibleArea = null) {
         this.cHeader.clearRect(0, 0, this.headerCanvas.width, this.headerCanvas.height);
        
@@ -1752,6 +1872,10 @@ getCumulativeHeightTillRow(startRow){
         }
     }
     
+    /**
+     *  This is used to draw the data canvas
+     * @param {number} visibleArea It is the current visibleArea
+     */
     drawData(visibleArea = null) {
         let x = 0;
         let selectionBounds = { top: Infinity, left: Infinity, bottom: -Infinity, right: -Infinity };
@@ -1822,6 +1946,14 @@ getCumulativeHeightTillRow(startRow){
         }
     }
 
+    /**
+     * This is used to draw Input, on double click of dataCanavs
+     * @param {number} xcord It is the x position of input
+     * @param {number} ycord It is the y position of input
+     * @param {number} cellKey It is the cellKey, which helps to get the data
+     * @param {number} rowIndex It is the rowIndex of the sampleData
+     * @param {number} width It is the width of  the input
+     */
     drawInput(xcord, ycord, cellKey, rowIndex, width) {
 
         // Remove any existing input elements
@@ -1883,6 +2015,9 @@ getCumulativeHeightTillRow(startRow){
         input.focus();
     }
 
+    /**
+     * 
+     */
     // chcek it later
     async updateData(){
         try {
@@ -1929,25 +2064,35 @@ getCumulativeHeightTillRow(startRow){
         }
     }
 
-    async editData(data,rowIndex,cellKey,inputVal,prevValue) {
+    /**
+     * This is used to handle the input editing
+     * @param {SampleData} data This is the data to show to the dataCanavs
+     * @param {number} rowIndex This is the rowIndex of the sampleData
+     * @param {string} cellKey This is the cellKey which helps to get the sampleData
+     * @param {string} inputVal This is the current input value
+     * @param {string} prevValue This is the previous input value
+     */
+    async editData(data, rowIndex, cellKey, inputVal, prevValue) {
         try {
             await axios.post("http://localhost:5103/api/check/update", data);
             alert(`Successfully Edited ${cellKey}`);
             this.sampleData[rowIndex][cellKey] = inputVal;
-            this.drawTable(this.headers,this.visibleArea);
+            this.drawTable(this.headers, this.visibleArea);
         } catch (error) {
-            alert('Error Occurred.\nPossible reasons:\n1. Added Wrong Email Format\n2. Added Wrong Telephone Number Format\n3. Added Empty Value');
+            if (error.response && error.response.data && error.response.data.message) {
+                alert(`Error Occurred: ${error.response.data.message}`);
+            } else {
+                alert('An unknown error occurred.');
+            }
             console.log(error);
             this.sampleData[rowIndex][cellKey] = prevValue;
-            this.drawTable(this.headers,this.visibleArea);
+            this.drawTable(this.headers, this.visibleArea);
         }
     }
-
-
     
-    
-    
-    
+    /**
+     * This is used to handle the scroll
+     */
     handleScroll() {
         const scrollLeft = this.container.scrollLeft;
         const scrollTop = this.container.scrollTop;
@@ -1970,6 +2115,12 @@ getCumulativeHeightTillRow(startRow){
         this.updateVisibleArea(scrollLeft, scrollTop,scrollDirection);
     }
 
+    /**
+     * This is used to get the visibleArea
+     * @param {number} scrollX It is the total number of x position that scrolled
+     * @param {number} scrollY It is the total number of y position that scrolled
+     * @returns {VisibleArea}
+     */
 getVisibleArea(scrollX, scrollY) {
     // For rows
     const startRow = Math.floor(scrollY / this.headerHeight);
@@ -2008,6 +2159,12 @@ getVisibleArea(scrollX, scrollY) {
 }
 
 
+/**
+ * It is used to update the visibleArea dynamically
+ * @param {number} scrollLeft  It is the total number of x position that scrolled
+ * @param {number} scrollTop It is the total number of y position that scrolled
+ * @param {string} scrollDirection It is the scrollDirection
+ */
    async updateVisibleArea(scrollLeft, scrollTop, scrollDirection) {
     this.visibleArea = this.getVisibleArea(scrollLeft, scrollTop);
     console.log(this.visibleArea);
@@ -2075,7 +2232,11 @@ getVisibleArea(scrollX, scrollY) {
     this.lineDraw.drawExcel(this.headers, this.sampleData, this.visibleArea);
 }
 
-
+/**
+ * This is used to get the rowIndex At y
+ * @param {number} y It is the y position where user clicked
+ * @returns {number}
+ */
     getRowIndexAtY(y) {
         let cumulativeHeight = this.headerHeight;
         for (let i = 0; i < this.sampleData.length; i++) {
@@ -2087,6 +2248,11 @@ getVisibleArea(scrollX, scrollY) {
         return this.sampleData.length - 1;
     }
 
+    /**
+     * This is used to get the colIndex At x
+     * @param {number} x It is the x position where user clicked
+     * @returns {number}
+     */
     getColIndexAtX(x) {
         let cumulativeWidth = 0;
         for (let i = 0; i < this.headers.length; i++) {
@@ -2098,6 +2264,11 @@ getVisibleArea(scrollX, scrollY) {
         return this.headers.length - 1;
     }
 
+    /**
+     * This is used to get the total visibleRowsCount
+     * @param {number} scrollTop  It is the total number of y position that scrolled
+     * @returns {number}
+     */
     getVisibleRowCount(scrollTop) {
         let visibleHeight = this.getVisibleHeight();
         let cumulativeHeight = 0;
@@ -2112,7 +2283,11 @@ getVisibleArea(scrollX, scrollY) {
         }
         return count;
     }
-
+    /**
+     * This is used to get the total visibleColsCount
+     * @param {number} scrollLeft It is the total number of x position that 
+     * @returns {number}
+     */
     getVisibleColCount(scrollLeft) {
         let visibleWidth = this.getVisibleWidth();
         let cumulativeWidth = 0;
@@ -2126,7 +2301,9 @@ getVisibleArea(scrollX, scrollY) {
         }
         return count;
     }
-
+    /**
+     * This is used to add the rows
+     */
     async addRows() {
         for (let i = 0; i < 50; i++) {
             // let row = {};
@@ -2152,7 +2329,11 @@ getVisibleArea(scrollX, scrollY) {
         }
         this.updateCanvasSizes();
     }
-
+    /**
+     * This is used to get next added Column Label
+     * @param {string} lastLabel It is the previous label of the column
+     * @returns {string}
+     */
     getNextColumnLabel(lastLabel) {
         let result = '';
         let carry = true;
@@ -2177,6 +2358,9 @@ getVisibleArea(scrollX, scrollY) {
         return result;
     }
 
+    /**
+     * This is used to add the next column
+     */
       addColumns() {
         // alert(this.headers.length);
         const lastColumn = this.headers[this.headers.length - 1].data;
@@ -2199,6 +2383,10 @@ getVisibleArea(scrollX, scrollY) {
         this.updateCanvasSizes();
     }
 
+    /**
+     * This function will run when the user will right click
+     * @param {Event} event 
+     */
     // handle Right Click
     handleRightClick(event){
         event.preventDefault();
@@ -2216,19 +2404,47 @@ getVisibleArea(scrollX, scrollY) {
         const rowIndex = this.getPositionY(y);
 
         this.deleteState.rowIndex = rowIndex;
+        this.deleteState.visible = true;
 
 
-        this.contextMenu.style.display = "block";
+        this.contextMenu.style.display = this.deleteState.visible ? "block":"none";
         this.contextMenu.style.top = `${y-45}px`;
         this.contextMenu.style.left = `${x-150}px`;
         
         // alert(rowIndex);
     }
-    handleDelete(event){
-        // console.log(this.sampleData[this.deleteState.rowIndex]);
-        alert(this.deleteState.rowIndex);
+    /**
+     * This function will run when the user will click on delete
+     * @param {Event} event 
+     */
+    async handleDelete(event){
+        // alert(this.sampleData[this.deleteState.rowIndex].id);
+        // alert(this.deleteState.rowIndex);
+        const id = this.sampleData[this.deleteState.rowIndex].id;
+        try{
+            await fetch(`http://localhost:5103/api/check/delete/${id}`);
+            // alert("Successfully deleted");
+            this.sampleData = this.sampleData.filter((d)=>d.id !== id);
+            this.drawTable(this.headers,this.visibleArea);
+            alert('Successfully deleted')
+        }catch(error){
+            if (error.response && error.response.data && error.response.data.message) {
+                alert(`Error Occurred: ${error.response.data.message}`);
+            } else {
+                alert('An unknown error occurred.');
+            }
+            console.log(error);
+            // alert(error.message);
+        }
+        this.deleteState.visible = false;
+        this.contextMenu.style.display = 'none';
     }
     
+    /**
+     * This function will handle the double click event
+     * @param {Event} event 
+     * @returns {void}
+     */
     handleDbClick(event) {
         const rect = this.dataCanvas.getBoundingClientRect();
         let widthTillCol = this.getCumulativeWidthTillColumn(this.visibleArea.startCol);
@@ -2272,20 +2488,32 @@ getVisibleArea(scrollX, scrollY) {
         }
     }
 
-    async getData(batchStart){
-            try{
-                // this.status.textContent = "Loading data..."
-                const res = await fetch(`http://localhost:5103/api/check/data/${batchStart}/${this.sortingState.columnName}/${this.sortingState.sortOrder}`);
-                const response = await res.json();
-                // console.log(response.data);
-                return response.data;
-            }catch(error){
-                console.log(error);
-                return [];
-            }finally{
-                // this.status.textContent = "";
-            }
+    /**
+     * Fetches data from the API based on the batch start index and sorting state.
+     * 
+     * @param {number} batchStart - The starting index of the data batch to fetch.
+     * @returns {Promise<Object[]>} - A promise that resolves to an array of data objects.
+     */
+    async getData(batchStart) {
+        try {
+            // Construct the API endpoint URL
+            const url = `http://localhost:5103/api/check/data/${batchStart}/${this.sortingState.columnName}/${this.sortingState.sortOrder}`;
+            
+            // Fetch data from the API
+            const res = await fetch(url);
+            const response = await res.json();
+            
+            // Return the data from the response
+            return response.data;
+        } catch (error) {
+            console.log(error);
+            return [];
+        } finally {
+            // Cleanup actions, such as updating the UI, can be performed here
+            // this.status.textContent = "";
+        }
     }
+
 
    
    
